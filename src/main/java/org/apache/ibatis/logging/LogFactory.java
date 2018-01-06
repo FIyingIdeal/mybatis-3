@@ -30,6 +30,11 @@ public final class LogFactory {
 
   private static Constructor<? extends Log> logConstructor;
 
+  /**
+   * 静态代码块，用于探测应该使用哪一个日志框架来处理日志
+   * 注意tryImplementation(Runnable)方法接收的是一个Runnable类型参数
+   * @see LogFactory#tryImplementation(Runnable)
+   */
   static {
     tryImplementation(new Runnable() {
       @Override
@@ -117,6 +122,13 @@ public final class LogFactory {
     setImplementation(org.apache.ibatis.logging.nologging.NoLoggingImpl.class);
   }
 
+  /**
+   * tryImplementation接收一个Runnable类型参数，只有当logConstructor不为空的时候才会继续探测，否则都直接跳过了
+   * 但有一点需要注意的是，在该方法中直接调用了run()方法，而没有使用Thread.start()，这属于方法调用而不是线程调用...
+   * 当调用run()方法的时候，最终会调用setImplementation(Class)方法，但有可能因为未找到对应的构造方法而抛出异常，
+   * 这里捕获了异常而没有进行任何处理，是为了继续探测是否使用了其他的日志框架
+   * @param runnable
+   */
   private static void tryImplementation(Runnable runnable) {
     if (logConstructor == null) {
       try {
@@ -127,6 +139,11 @@ public final class LogFactory {
     }
   }
 
+  /**
+   * 通过反射方式来实例化某一个存在的日志框架的实例，并赋值给logConstructor.
+   * 如果未找到对应的类或其对应的构造方法会抛出异常，在调用方{@code tryImplementation(Runnable)}进行了异常捕获
+   * @param implClass
+   */
   private static void setImplementation(Class<? extends Log> implClass) {
     try {
       Constructor<? extends Log> candidate = implClass.getConstructor(String.class);

@@ -37,6 +37,21 @@ import org.apache.ibatis.io.Resources;
 /**
  * @author Clinton Begin
  * @author Kazuki Shimizu
+ * 这个类的作用是注册TypeHandler
+ * 其XML配置方法可以是这个样子的：
+ * <typeHandlers>
+ *     <package name="poackage name"/>
+ *     <typeHandler javaType="String" jdbcType="VARCHAR" handler="org.apache.ibatis.builder.CustomStringTypeHandler"/>
+ * </typeHandlers>
+ *
+ * 注册的大体流程是：
+ *    1.如果配置文件使用的是<package>标签来指定TypeHandler所在的包，先扫描该包下的所有TypeHandler实现类，然后获取类上的@MappedTypes(对应javaType)
+ *      和@MappedJdbcTypes(对应jdbcType)注解，并解析成对应的Class和{@link JdbcType}；
+ *    2.如果配置文件中使用的是<typeHandler>来指定，则直接解析标签中的属性，javaType、jdbcType和handler，其中javaType和jdbcType可以省略，如果省略的话
+ *      同样会去找@MappedTypes和@MappedJdbcTypes注解；
+ *    3.将解析出来的类型保存到Map当中。这里会有两个Map来存：
+ *        TYPE_HANDLER_MAP  ： 当javaType不为空的时候，会保存到这里，外层Map的key值为javaType对应的Type，内层Map的key值为对应的JdbcType
+ *        ALL_TYPE_HANDLERS_MAP ： 所有的TypeHandler都会保存到这里，其key值为对应TypeHandler的Class对象
  */
 public final class TypeHandlerRegistry {
 
@@ -307,11 +322,14 @@ public final class TypeHandlerRegistry {
   }
 
   private <T> void register(Type javaType, TypeHandler<? extends T> typeHandler) {
+    //获取TypeHandler子类上的@MapperJdbcTypes注解，该注解的值作为jdbcType
     MappedJdbcTypes mappedJdbcTypes = typeHandler.getClass().getAnnotation(MappedJdbcTypes.class);
     if (mappedJdbcTypes != null) {
       for (JdbcType handledJdbcType : mappedJdbcTypes.value()) {
         register(javaType, handledJdbcType, typeHandler);
       }
+      //如果@MappedJdbcTypes注解的includeNullJdbcType为true的话，那么会为指定的javaType和TypeHandler注册一个jdbcType为null的handler
+      //这样当从数据库查询出来的是null时，也可以进行处理
       if (mappedJdbcTypes.includeNullJdbcType()) {
         register(javaType, null, typeHandler);
       }
@@ -350,6 +368,7 @@ public final class TypeHandlerRegistry {
 
   public void register(Class<?> typeHandlerClass) {
     boolean mappedTypeFound = false;
+    //寻找TypeHandler子类上的@MappedTypes注解，该注解的值会被当做javaType
     MappedTypes mappedTypes = typeHandlerClass.getAnnotation(MappedTypes.class);
     if (mappedTypes != null) {
       for (Class<?> javaTypeClass : mappedTypes.value()) {
@@ -384,6 +403,8 @@ public final class TypeHandlerRegistry {
   public <T> TypeHandler<T> getInstance(Class<?> javaTypeClass, Class<?> typeHandlerClass) {
     if (javaTypeClass != null) {
       try {
+        // 如果javaTypeClass不为null，寻找TypeHandler实现类的带有一个Class类型参数的构造方法
+        // 如果没有找到的话会抛出NoSuchMethodException异常，而捕获该异常以后不做任何处理
         Constructor<?> c = typeHandlerClass.getConstructor(Class.class);
         return (TypeHandler<T>) c.newInstance(javaTypeClass);
       } catch (NoSuchMethodException ignored) {
@@ -393,6 +414,7 @@ public final class TypeHandlerRegistry {
       }
     }
     try {
+      // 如果为找到带有Class类型参数的构造方法，则获取默认的无参构造方法并实例化
       Constructor<?> c = typeHandlerClass.getConstructor();
       return (TypeHandler<T>) c.newInstance();
     } catch (Exception e) {
@@ -404,10 +426,12 @@ public final class TypeHandlerRegistry {
 
   public void register(String packageName) {
     ResolverUtil<Class<?>> resolverUtil = new ResolverUtil<Class<?>>();
+    //查找指定package下边的TypeHandler的子类
     resolverUtil.find(new ResolverUtil.IsA(TypeHandler.class), packageName);
     Set<Class<? extends Class<?>>> handlerSet = resolverUtil.getClasses();
     for (Class<?> type : handlerSet) {
       //Ignore inner classes and interfaces (including package-info.java) and abstract classes
+      //isAnonymousClass()是用来判断一个类是否是匿名类的
       if (!type.isAnonymousClass() && !type.isInterface() && !Modifier.isAbstract(type.getModifiers())) {
         register(type);
       }

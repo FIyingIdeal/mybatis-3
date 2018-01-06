@@ -138,6 +138,10 @@ public class TypeAliasRegistry {
     }
   }
 
+  /**
+   * 为JavaBean注册别名，如果在配置文件中的<typeAlias>中未指定对应的alias属性的话，会从type指定的类上去找@Alias注解
+   * @param type
+   */
   public void registerAlias(Class<?> type) {
     String alias = type.getSimpleName();
     Alias aliasAnnotation = type.getAnnotation(Alias.class);
@@ -152,6 +156,7 @@ public class TypeAliasRegistry {
       throw new TypeException("The parameter alias cannot be null");
     }
     // issue #748
+    //确保别名的唯一性，但由此也可以知道起别名的一个限制：两个别名toLowerCase()或toUpperCase()以后不能够一样，否则别名注册会失败
     String key = alias.toLowerCase(Locale.ENGLISH);
     if (TYPE_ALIASES.containsKey(key) && TYPE_ALIASES.get(key) != null && !TYPE_ALIASES.get(key).equals(value)) {
       throw new TypeException("The alias '" + alias + "' is already mapped to the value '" + TYPE_ALIASES.get(key).getName() + "'.");

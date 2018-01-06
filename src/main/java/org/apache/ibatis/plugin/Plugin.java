@@ -40,6 +40,7 @@ public class Plugin implements InvocationHandler {
     this.signatureMap = signatureMap;
   }
 
+  //获取代理对象
   public static Object wrap(Object target, Interceptor interceptor) {
     Map<Class<?>, Set<Method>> signatureMap = getSignatureMap(interceptor);
     Class<?> type = target.getClass();
@@ -66,21 +67,32 @@ public class Plugin implements InvocationHandler {
     }
   }
 
+    /**
+     * FlyingIdeal : 将所有在自定义的拦截器(实现了Interceptor接口)中通过注解方式标注的需要进行拦截的方法按照被代理类型进行分类，存放到signatureMap中
+     * @param interceptor 自定义的Interceptor
+     * @return
+     */
   private static Map<Class<?>, Set<Method>> getSignatureMap(Interceptor interceptor) {
+      //获取自定义拦截器（Interceptor）上的注解 @Intercepts
     Intercepts interceptsAnnotation = interceptor.getClass().getAnnotation(Intercepts.class);
     // issue #251
     if (interceptsAnnotation == null) {
       throw new PluginException("No @Intercepts annotation was found in interceptor " + interceptor.getClass().getName());      
     }
+    //@Intercepts定义了一个@Signature的数组，@Signature中详细定义了被拦截方法的代理类类型(type)，方法名(method)，方法参数(args)
+    //获取所有的@Signature
     Signature[] sigs = interceptsAnnotation.value();
     Map<Class<?>, Set<Method>> signatureMap = new HashMap<Class<?>, Set<Method>>();
+    //遍历所有的@Signature，将该Interceptor所拦截的方法按被代理类的类型进行划分，存放到signatureMap中
     for (Signature sig : sigs) {
+      //同一种个被代理类有可能有多个方法需要进行拦截，故用Set存放
       Set<Method> methods = signatureMap.get(sig.type());
       if (methods == null) {
         methods = new HashSet<Method>();
         signatureMap.put(sig.type(), methods);
       }
       try {
+        //获取需要被拦截的方法
         Method method = sig.type().getMethod(sig.method(), sig.args());
         methods.add(method);
       } catch (NoSuchMethodException e) {

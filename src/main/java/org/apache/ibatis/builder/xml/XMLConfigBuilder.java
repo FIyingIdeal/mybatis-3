@@ -127,9 +127,12 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
     Properties props = context.getChildrenAsProperties();
     // Check that all settings are known to the configuration class
+    //确保每一个setting标签中的name属性的值在Configuration类中都有对应的setter/getter方法（或者说有对应的属性）
+    //MetaClass中会构造一个Reflector对象，这个对象就是指定了的一些相关信息，如对应的构造方法，setter/getter方法，对应的field
     MetaClass metaConfig = MetaClass.forClass(Configuration.class, localReflectorFactory);
     for (Object key : props.keySet()) {
       if (!metaConfig.hasSetter(String.valueOf(key))) {
+        //判断setting标签中对应的name属性的值是否在Configuration类中有相应的setter方法，如果没有的话，就抛出异常
         throw new BuilderException("The setting " + key + " is not known.  Make sure you spelled it correctly (case sensitive).");
       }
     }
@@ -153,15 +156,20 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void typeAliasesElement(XNode parent) {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
+        //<typeAliases>可以有两类子标签：<typeAlias>和<package>，
+        //如果为<package name="package name">的话，mybatis会自动扫描包内定义的JavaBean，然后分别为JavaBean注册一个小写字母开头的非完全限定的类名形式的别名
         if ("package".equals(child.getName())) {
           String typeAliasPackage = child.getStringAttribute("name");
           configuration.getTypeAliasRegistry().registerAliases(typeAliasPackage);
         } else {
+          //处理<typeAlias>子标签
           String alias = child.getStringAttribute("alias");
           String type = child.getStringAttribute("type");
           try {
+            //根据type属性的值获取对应的Class对象
             Class<?> clazz = Resources.classForName(type);
             if (alias == null) {
+              //如果为指定alias属性的话，会以type对应的Class类上@Alias注解值为alias，如果@Alias也没有找到的话，会抛出异常
               typeAliasRegistry.registerAlias(clazz);
             } else {
               typeAliasRegistry.registerAlias(alias, clazz);
@@ -174,10 +182,16 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 解析<plugins>配置，注册interceptor的过程
+   * @param parent
+   * @throws Exception
+   */
   private void pluginElement(XNode parent) throws Exception {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
         String interceptor = child.getStringAttribute("interceptor");
+        //读取子标签的name和value属性到Properties对象中，这里就是对应<plugin>的<property>子标签中的name和value属性
         Properties properties = child.getChildrenAsProperties();
         Interceptor interceptorInstance = (Interceptor) resolveClass(interceptor).newInstance();
         interceptorInstance.setProperties(properties);
@@ -212,6 +226,11 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 获取通过resource或url配置的properties文件中的配置，归总到一个Properties对象当中，并将其设置到了parser和configuration当中
+   * @param context
+   * @throws Exception
+   */
   private void propertiesElement(XNode context) throws Exception {
     if (context != null) {
       Properties defaults = context.getChildrenAsProperties();
@@ -234,6 +253,11 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 设置setting配置，如果在配置文件中没有配置的话，绝大部分的配置都会给定一个默认值
+   * @param props
+   * @throws Exception
+   */
   private void settingsElement(Properties props) throws Exception {
     configuration.setAutoMappingBehavior(AutoMappingBehavior.valueOf(props.getProperty("autoMappingBehavior", "PARTIAL")));
     configuration.setAutoMappingUnknownColumnBehavior(AutoMappingUnknownColumnBehavior.valueOf(props.getProperty("autoMappingUnknownColumnBehavior", "NONE")));
@@ -258,6 +282,9 @@ public class XMLConfigBuilder extends BaseBuilder {
     configuration.setUseActualParamName(booleanValueOf(props.getProperty("useActualParamName"), true));
     configuration.setReturnInstanceForEmptyRow(booleanValueOf(props.getProperty("returnInstanceForEmptyRow"), false));
     configuration.setLogPrefix(props.getProperty("logPrefix"));
+    //设置日志框架，即需要配置一个类似<setting name="logImpl" value="STDOUT_LOGGING"/>的配置，name无需多说，
+    //value属性的值是可以指定为一个Log接口的实现类，而在Configuration类中的构造方法中注册了又很多别名，其中就包括了STDOUT_LOGGING
+    //所以value属性既可以指定为别名也可以指定为Log接口实现类的方法名
     @SuppressWarnings("unchecked")
     Class<? extends Log> logImpl = (Class<? extends Log>)resolveClass(props.getProperty("logImpl"));
     configuration.setLogImpl(logImpl);
@@ -271,10 +298,13 @@ public class XMLConfigBuilder extends BaseBuilder {
       }
       for (XNode child : context.getChildren()) {
         String id = child.getStringAttribute("id");
+        //为什么只解析了与default一致的那个environment？？？
         if (isSpecifiedEnvironment(id)) {
           TransactionFactory txFactory = transactionManagerElement(child.evalNode("transactionManager"));
           DataSourceFactory dsFactory = dataSourceElement(child.evalNode("dataSource"));
           DataSource dataSource = dsFactory.getDataSource();
+          //Environment中的静态内部类Builder可以参考Effective Java中的“当构造方法参数过多时使用builder模式”
+          //参考链接： http://www.cnblogs.com/IcanFixIt/p/8087978.html
           Environment.Builder environmentBuilder = new Environment.Builder(id)
               .transactionFactory(txFactory)
               .dataSource(dataSource);
@@ -325,13 +355,20 @@ public class XMLConfigBuilder extends BaseBuilder {
     throw new BuilderException("Environment declaration requires a DataSourceFactory.");
   }
 
+  /**
+   * 注册TypeHandler，参考{@link org.apache.ibatis.type.TypeHandlerRegistry}
+   * @param parent
+   * @throws Exception
+   */
   private void typeHandlerElement(XNode parent) throws Exception {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
+        //处理使用<package>指定的TypeHandlers，会扫描指定包下的所有TypeHandler实现类，然后查找类上的@MappedTypes和@MappedJdbcTypes注解
         if ("package".equals(child.getName())) {
           String typeHandlerPackage = child.getStringAttribute("name");
           typeHandlerRegistry.register(typeHandlerPackage);
         } else {
+          //处理使用<typeHandler>指定的TypeHandler
           String javaTypeName = child.getStringAttribute("javaType");
           String jdbcTypeName = child.getStringAttribute("jdbcType");
           String handlerTypeName = child.getStringAttribute("handler");
@@ -352,6 +389,11 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 注册mapper
+   * @param parent
+   * @throws Exception
+   */
   private void mapperElement(XNode parent) throws Exception {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
@@ -376,6 +418,7 @@ public class XMLConfigBuilder extends BaseBuilder {
             Class<?> mapperInterface = Resources.classForName(mapperClass);
             configuration.addMapper(mapperInterface);
           } else {
+            //在<mapper>标签中，url、resource和class属性只能出现一个，不能同时出现多个
             throw new BuilderException("A mapper element may only specify a url, resource or class, but not more than one.");
           }
         }

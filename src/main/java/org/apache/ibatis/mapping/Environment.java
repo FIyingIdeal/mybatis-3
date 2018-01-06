@@ -21,6 +21,7 @@ import org.apache.ibatis.transaction.TransactionFactory;
 
 /**
  * @author Clinton Begin
+ * Environment是一个对数据源与事务封装的类，即与DB相关的内容
  */
 public final class Environment {
   private final String id;
@@ -42,6 +43,10 @@ public final class Environment {
     this.dataSource = dataSource;
   }
 
+  /**
+   * Builder模式，防止构造参数过多造成的混淆。
+   * 参考：http://www.cnblogs.com/IcanFixIt/p/8087978.html
+   */
   public static class Builder {
       private String id;
       private TransactionFactory transactionFactory;

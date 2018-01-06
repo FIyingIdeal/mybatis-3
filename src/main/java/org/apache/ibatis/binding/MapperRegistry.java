@@ -58,7 +58,9 @@ public class MapperRegistry {
   }
 
   public <T> void addMapper(Class<T> type) {
+    // Mapper类必须是一个interface类型的，否则不处理！！！
     if (type.isInterface()) {
+      // 如果已经被注册过的话，将会抛出异常
       if (hasMapper(type)) {
         throw new BindingException("Type " + type + " is already known to the MapperRegistry.");
       }

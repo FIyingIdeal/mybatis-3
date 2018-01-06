@@ -528,6 +528,8 @@ public class Configuration {
     return MetaObject.forObject(object, objectFactory, objectWrapperFactory, reflectorFactory);
   }
 
+  //将配置文件中读取的所有的Interceptor都注册到ParameterHandler中，
+  // 最后通过每个Interceptor的注解判断是否需要拦截该ParameterHandler的某个方法。
   public ParameterHandler newParameterHandler(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql) {
     ParameterHandler parameterHandler = mappedStatement.getLang().createParameterHandler(mappedStatement, parameterObject, boundSql);
     parameterHandler = (ParameterHandler) interceptorChain.pluginAll(parameterHandler);

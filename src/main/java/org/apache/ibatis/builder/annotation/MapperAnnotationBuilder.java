@@ -161,6 +161,7 @@ public class MapperAnnotationBuilder {
     // to prevent loading again a resource twice
     // this flag is set at XMLMapperBuilder#bindMapperForNamespace
     if (!configuration.isResourceLoaded("namespace:" + type.getName())) {
+      // 获取interface Mapper对应的xml配置文件路径，由此可知是在同一个包下查找
       String xmlResource = type.getName().replace('.', '/') + ".xml";
       InputStream inputStream = null;
       try {
@@ -169,6 +170,7 @@ public class MapperAnnotationBuilder {
         // ignore, resource is not required
       }
       if (inputStream != null) {
+        // 如果xml mapper存在的话，就加载解析
         XMLMapperBuilder xmlParser = new XMLMapperBuilder(inputStream, assistant.getConfiguration(), xmlResource, configuration.getSqlFragments(), type.getName());
         xmlParser.parse();
       }

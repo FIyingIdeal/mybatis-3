@@ -43,6 +43,8 @@ import org.apache.ibatis.reflection.property.PropertyNamer;
  * allows for easy mapping between property names and getter/setter methods.
  *
  * @author Clinton Begin
+ *
+ * 这个类是用于描述一个指定类的相关信息的，如类的构造方法，类的getter/setter方法，相关的field等
  */
 public class Reflector {
 
@@ -335,6 +337,7 @@ public class Reflector {
 
   private void addUniqueMethods(Map<String, Method> uniqueMethods, Method[] methods) {
     for (Method currentMethod : methods) {
+      //确保方法不是一个bridge方法，bridge方法是由编译器在编译期生成的，具体参考：http://www.blogjava.net/DLevin/archive/2011/06/23/352917.html
       if (!currentMethod.isBridge()) {
         String signature = getSignature(currentMethod);
         // check to see if the method is already known
