@@ -24,10 +24,16 @@ import org.apache.ibatis.session.Configuration;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-1-10 18:01:50
+ * @function 这个类是对jdbc要求的sql（不知道该如何更好的描述，就是使用?作为占位符的那种sql）的一个封装
  */
 public class StaticSqlSource implements SqlSource {
 
+  // jdbc要求的那个sql格式，如 insert into user (id,name) values (?,?)
   private String sql;
+  // sql所需的参数的封装
   private List<ParameterMapping> parameterMappings;
   private Configuration configuration;
 

@@ -184,6 +184,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
     extend = applyCurrentNamespace(extend, true);
 
     if (extend != null) {
+      // extends后边的resultMap必须要先定义，否则的话会抛出异常
       if (!configuration.hasResultMap(extend)) {
         throw new IncompleteElementException("Could not find a parent resultmap with id '" + extend + "'");
       }
@@ -320,6 +321,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
         throw new IncompleteElementException("Could not find parameter map " + parameterMapName, e);
       }
     } else if (parameterTypeClass != null) {
+      // 如果指定的是parameterType，则会通过parameterType指定的类来构建一个ParameterMap实例
       List<ParameterMapping> parameterMappings = new ArrayList<ParameterMapping>();
       parameterMap = new ParameterMap.Builder(
           configuration,
@@ -472,6 +474,11 @@ public class MapperBuilderAssistant extends BaseBuilder {
         nestedResultMap, notNullColumn, columnPrefix, typeHandler, flags, null, null, configuration.isLazyLoadingEnabled());
   }
 
+  /**
+   * 获取LanguageDriver，如果没有设置的话，mybatis会在构建Configuration的时候，在其构造方法中设置一个默认值 - XMLLanguageDriver
+   * @param langClass
+   * @return
+   */
   public LanguageDriver getLanguageDriver(Class<?> langClass) {
     if (langClass != null) {
       configuration.getLanguageRegistry().register(langClass);

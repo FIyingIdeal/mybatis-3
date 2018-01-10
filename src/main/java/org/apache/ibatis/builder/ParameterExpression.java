@@ -30,6 +30,10 @@ import java.util.HashMap;
  * </pre>
  *
  * @author Frank D. Martinez [mnesarco]
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-1-10 15:47:33
+ * @function 这个类的主要作用是进行参数表达式的解析，参数表达式的形式是： name, javaType=xxx, jdbcType=xxx, typeHandler=xxx
  */
 public class ParameterExpression extends HashMap<String, String> {
 
@@ -39,6 +43,7 @@ public class ParameterExpression extends HashMap<String, String> {
     parse(expression);
   }
 
+  //参数表达式解析
   private void parse(String expression) {
     int p = skipWS(expression, 0);
     if (expression.charAt(p) == '(') {
@@ -114,6 +119,12 @@ public class ParameterExpression extends HashMap<String, String> {
     option(expression, right + 1);
   }
 
+  /**
+   * 处理参数中的相关属性，
+   * 如#{age, jdbcType=xxx, javaType=xxx, typeHandler=xxx}，这里讲jdbcType、javaType、typeHandler等属性与对应值保存到了Map当中
+   * @param expression
+   * @param p
+   */
   private void option(String expression, int p) {
     int left = skipWS(expression, p);
     if (left < expression.length()) {
