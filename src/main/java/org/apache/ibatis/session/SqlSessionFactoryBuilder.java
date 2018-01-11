@@ -72,6 +72,13 @@ public class SqlSessionFactoryBuilder {
     return build(inputStream, null, properties);
   }
 
+  /**
+   * 解析config配置文件（这个过程包含对mapper配置文件的解析）（其实解析过程就是构建Configuration对象的过程），然后构建SqlSessionFactory
+   * @param inputStream
+   * @param environment
+   * @param properties
+   * @return
+   */
   public SqlSessionFactory build(InputStream inputStream, String environment, Properties properties) {
     try {
       XMLConfigBuilder parser = new XMLConfigBuilder(inputStream, environment, properties);

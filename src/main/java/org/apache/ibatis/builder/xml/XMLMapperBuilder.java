@@ -87,9 +87,18 @@ public class XMLMapperBuilder extends BaseBuilder {
     this.resource = resource;
   }
 
+  /**
+   * 这个方法做了以下几个事情：
+   *  1. 判断当前的resource（是一个mapper文件的路径名）是否已被解析
+   *      1.1 如果未解析，先对整个mapper配置文件进行解析；
+   *      1.2 解析完成将这个resource添加到{@link Configuration#loadedResources}（已解析列表）当中；
+   */
   public void parse() {
+    // 如果resource未解析，先进行解析
     if (!configuration.isResourceLoaded(resource)) {
+      // 解析整个mapper配置文件
       configurationElement(parser.evalNode("/mapper"));
+      // 将resource添加到{@link Configuration#loadedResources}中，它表示一个已解析列表
       configuration.addLoadedResource(resource);
       bindMapperForNamespace();
     }
@@ -116,6 +125,7 @@ public class XMLMapperBuilder extends BaseBuilder {
       parameterMapElement(context.evalNodes("/mapper/parameterMap"));
       resultMapElements(context.evalNodes("/mapper/resultMap"));
       sqlElement(context.evalNodes("/mapper/sql"));
+      // 解析sql配置
       buildStatementFromContext(context.evalNodes("select|insert|update|delete"));
     } catch (Exception e) {
       throw new BuilderException("Error parsing Mapper XML. Cause: " + e, e);
@@ -140,8 +150,12 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 尝试重新解析之前解析失败的resultMap
+   */
   private void parsePendingResultMaps() {
     Collection<ResultMapResolver> incompleteResultMaps = configuration.getIncompleteResultMaps();
+    // TODO 为什么单单这里做了一个同步？
     synchronized (incompleteResultMaps) {
       Iterator<ResultMapResolver> iter = incompleteResultMaps.iterator();
       while (iter.hasNext()) {
@@ -170,6 +184,9 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 尝试重新解析之前解析失败的<parameterMap>
+   */
   private void parsePendingStatements() {
     Collection<XMLStatementBuilder> incompleteStatements = configuration.getIncompleteStatements();
     synchronized (incompleteStatements) {
@@ -318,6 +335,11 @@ public class XMLMapperBuilder extends BaseBuilder {
     try {
       return resultMapResolver.resolve();
     } catch (IncompleteElementException  e) {
+      /**
+       * IncompleteElementException这个异常对于ResultMap是在无法找到extend属性指定的父resultMap时抛出的
+       * 当抛出这个异常的时候，会将当前这个resultMapResolver保存到 {@link Configuration#incompleteResultMaps} 当中
+       * 当解析完整个mapper配置文件以后，会调用 {@link XMLMapperBuilder#parsePendingResultMaps()} 方法尝试再次解析
+       */
       configuration.addIncompleteResultMap(resultMapResolver);
       throw e;
     }
@@ -494,6 +516,7 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
   private void bindMapperForNamespace() {
+    // 获取当前mapper配置文件的namespace，该值是interface的全限定名
     String namespace = builderAssistant.getCurrentNamespace();
     if (namespace != null) {
       Class<?> boundType = null;
@@ -507,6 +530,8 @@ public class XMLMapperBuilder extends BaseBuilder {
           // Spring may not know the real resource name so we set a flag
           // to prevent loading again this resource from the mapper interface
           // look at MapperAnnotationBuilder#loadXmlResource
+          // 将xml配置文件在 Configuration#loadResources 中注册了两次，一次是以xml文件的具体路径注册，一次是以 "namespace:" + ${namespace}
+          // TODO 对namespace的注册看原注释是为了和spring整合使用的，还没看到
           configuration.addLoadedResource("namespace:" + namespace);
           configuration.addMapper(boundType);
         }

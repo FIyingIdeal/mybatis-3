@@ -43,6 +43,7 @@ import org.apache.ibatis.mapping.ResultSetType;
 import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.mapping.SqlSource;
 import org.apache.ibatis.mapping.StatementType;
+import org.apache.ibatis.parsing.XNode;
 import org.apache.ibatis.reflection.MetaClass;
 import org.apache.ibatis.scripting.LanguageDriver;
 import org.apache.ibatis.session.Configuration;
@@ -184,7 +185,11 @@ public class MapperBuilderAssistant extends BaseBuilder {
     extend = applyCurrentNamespace(extend, true);
 
     if (extend != null) {
-      // extends后边的resultMap必须要先定义，否则的话会抛出异常
+      /**
+       * extends后边的resultMap如果没有找到（即还没有被解析，有可能定义在了后边或引用了其他地方的resultMap）的话会抛出IncompleteElementException异常
+       * 在 {@link org.apache.ibatis.builder.xml.XMLMapperBuilder#resultMapElement(XNode, List)} 中捕获这个异常以后会将相关的ResultMapResolver对象添加到{@link Configuration#incompleteResultMaps}中
+       * 在解析完每一个mapper配置文件以后都会调用{@link org.apache.ibatis.builder.xml.XMLMapperBuilder#parsePendingResultMaps()}方法从{@link Configuration#incompleteResultMaps}中获取之前解析失败的ResultMap尝试重新解析
+       */
       if (!configuration.hasResultMap(extend)) {
         throw new IncompleteElementException("Could not find a parent resultmap with id '" + extend + "'");
       }
@@ -318,6 +323,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
       try {
         parameterMap = configuration.getParameterMap(parameterMapName);
       } catch (IllegalArgumentException e) {
+        // 如果未找到ParameterMap属性所引用的<parameterMap>定义，将会抛出异常。在解析完每一个mapper的时候都会尝试重新解析之前解析失败的<parameterMap>
         throw new IncompleteElementException("Could not find parameter map " + parameterMapName, e);
       }
     } else if (parameterTypeClass != null) {

@@ -391,6 +391,8 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   /**
    * 注册mapper
+   * 如果是使用<package>或<mapper class=xxx>，会将package中的相关类或class指定的类添加到{@link Configuration#mapperRegistry}中
+   * 如果使用<mapper resource=xxx>或<mapper url=xxx>，会对指定的xml文件或url指定的文件进行解析
    * @param parent
    * @throws Exception
    */

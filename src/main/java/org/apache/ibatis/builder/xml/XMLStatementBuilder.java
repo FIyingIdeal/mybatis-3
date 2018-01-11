@@ -133,7 +133,8 @@ public class XMLStatementBuilder extends BaseBuilder {
     }
 
     /**
-     * 构建MappedStatement对象，并添加到{@link Configuration#mappedStatements}当中，
+     * 构建MappedStatement对象，并添加到{@link Configuration#mappedStatements}当中
+     * 它是一个Map结构，key值为对应XML中的 ${namespace} + ${sql标签中的id} ，value为MappedStatement对象
      */
     builderAssistant.addMappedStatement(id, sqlSource, statementType, sqlCommandType,
         fetchSize, timeout, parameterMap, parameterTypeClass, resultMap, resultTypeClass,

@@ -23,6 +23,10 @@ import org.apache.ibatis.mapping.ResultMapping;
 
 /**
  * @author Eduardo Macarron
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-1-11 11:39:50
+ * @function 这个类主要作用是为了将mapper配置文件中定义的每一个<resultMap>的封装对象ResultMap添加到 {@link org.apache.ibatis.session.Configuration#resultMaps} 中
  */
 public class ResultMapResolver {
   private final MapperBuilderAssistant assistant;
@@ -43,6 +47,10 @@ public class ResultMapResolver {
     this.autoMapping = autoMapping;
   }
 
+  /**
+   * 将构建的ResultMap添加到{@link org.apache.ibatis.session.Configuration#resultMaps}中
+   * @return
+   */
   public ResultMap resolve() {
     return assistant.addResultMap(this.id, this.type, this.extend, this.discriminator, this.resultMappings, this.autoMapping);
   }
