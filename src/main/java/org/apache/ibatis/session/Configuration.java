@@ -528,7 +528,7 @@ public class Configuration {
     return MetaObject.forObject(object, objectFactory, objectWrapperFactory, reflectorFactory);
   }
 
-  //将配置文件中读取的所有的Interceptor都注册到ParameterHandler中，
+  // 将配置文件中读取的所有的Interceptor都注册到ParameterHandler中，
   // 最后通过每个Interceptor的注解判断是否需要拦截该ParameterHandler的某个方法。
   public ParameterHandler newParameterHandler(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql) {
     ParameterHandler parameterHandler = mappedStatement.getLang().createParameterHandler(mappedStatement, parameterObject, boundSql);
@@ -567,6 +567,7 @@ public class Configuration {
     if (cacheEnabled) {
       executor = new CachingExecutor(executor);
     }
+    // 对Executor进行代理，并获取代理对象，实现了对Executor的拦截
     executor = (Executor) interceptorChain.pluginAll(executor);
     return executor;
   }

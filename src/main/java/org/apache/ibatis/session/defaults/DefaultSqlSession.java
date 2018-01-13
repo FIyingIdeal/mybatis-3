@@ -49,6 +49,8 @@ import org.apache.ibatis.session.SqlSession;
 public class DefaultSqlSession implements SqlSession {
 
   private Configuration configuration;
+
+  // 这里的executor是一个已经被代理过的对象，在执行的时候会执行相关拦截器的操作
   private Executor executor;
 
   private boolean autoCommit;
@@ -141,6 +143,14 @@ public class DefaultSqlSession implements SqlSession {
     return this.selectList(statement, parameter, RowBounds.DEFAULT);
   }
 
+  /**
+   * 第一个参数就是 ${namespace} + ${id}，用来获取MappedStatement的
+   * @param statement Unique identifier matching the statement to use.
+   * @param parameter A parameter object to pass to the statement.
+   * @param rowBounds  Bounds to limit object retrieval
+   * @param <E>
+   * @return
+   */
   @Override
   public <E> List<E> selectList(String statement, Object parameter, RowBounds rowBounds) {
     try {
@@ -317,6 +327,11 @@ public class DefaultSqlSession implements SqlSession {
     return (!autoCommit && dirty) || force;
   }
 
+  /**
+   * 这里将参数封装成了一个Map，所以如果object是一个Map类型，那将直接返回（Map没有继承Collection）
+   * @param object
+   * @return
+   */
   private Object wrapCollection(final Object object) {
     if (object instanceof Collection) {
       StrictMap<Object> map = new StrictMap<Object>();

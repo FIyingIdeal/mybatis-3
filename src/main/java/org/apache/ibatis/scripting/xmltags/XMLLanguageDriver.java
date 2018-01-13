@@ -44,6 +44,13 @@ public class XMLLanguageDriver implements LanguageDriver {
     return builder.parseScriptNode();
   }
 
+  /**
+   * 这个方法主要用来处理使用注解方式配置SQL的形式，如果sql被<script>所包围的话，会被封装成XNode对象，调用{@link this#createSqlSource(Configuration, XNode, Class)}
+   * @param configuration The MyBatis configuration
+   * @param script The content of the annotation
+   * @param parameterType input parameter type got from a mapper method or specified in the parameterType xml attribute. Can be null.
+   * @return
+   */
   @Override
   public SqlSource createSqlSource(Configuration configuration, String script, Class<?> parameterType) {
     // issue #3

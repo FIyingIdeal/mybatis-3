@@ -27,6 +27,12 @@ import org.apache.ibatis.reflection.ExceptionUtil;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-1-12 15:43:06
+ * @reference http://zhangbo-peipei-163-com.iteye.com/blog/2033832?utm_source=tuicool&utm_medium=referral
+ * 有关Mybatis的拦截器原理参考上边的链接内容，由浅入深讲解非常详细和易懂
+ * @function 这是一个动态代理类，主要负责生成代理对象和执行相关的拦截器。
  */
 public class Plugin implements InvocationHandler {
 
@@ -40,7 +46,7 @@ public class Plugin implements InvocationHandler {
     this.signatureMap = signatureMap;
   }
 
-  //获取代理对象
+  // 获取代理对象
   public static Object wrap(Object target, Interceptor interceptor) {
     Map<Class<?>, Set<Method>> signatureMap = getSignatureMap(interceptor);
     Class<?> type = target.getClass();

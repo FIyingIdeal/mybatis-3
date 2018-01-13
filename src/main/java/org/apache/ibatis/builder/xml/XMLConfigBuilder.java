@@ -191,7 +191,7 @@ public class XMLConfigBuilder extends BaseBuilder {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
         String interceptor = child.getStringAttribute("interceptor");
-        //读取子标签的name和value属性到Properties对象中，这里就是对应<plugin>的<property>子标签中的name和value属性
+        // 读取子标签的name和value属性到Properties对象中，这里就是对应<plugin>的<property>子标签中的name和value属性
         Properties properties = child.getChildrenAsProperties();
         Interceptor interceptorInstance = (Interceptor) resolveClass(interceptor).newInstance();
         interceptorInstance.setProperties(properties);
@@ -293,12 +293,15 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   private void environmentsElement(XNode context) throws Exception {
     if (context != null) {
+      // 如果在实例化SqlSessionFactory的时候没有指定具体使用哪一个environment，那将会取<environments default=xxx>中default属性指定的那一个
       if (environment == null) {
         environment = context.getStringAttribute("default");
       }
       for (XNode child : context.getChildren()) {
         String id = child.getStringAttribute("id");
-        //为什么只解析了与default一致的那个environment？？？
+        // 只解析多个<environment id=xxx>配置中的id值与
+        // 成员变量environment值（可以在实例化SqlSessionFactory的时候指定，或在未指定的时候取<environments default=xxx>指定的那个默认值）相同的那个配置
+        // 这也说明一个SqlSessionFactory只能与一个Environment对象相关联，如果需要配置多个数据源的话，就需要实例化多个SqlSessionFactory对象
         if (isSpecifiedEnvironment(id)) {
           TransactionFactory txFactory = transactionManagerElement(child.evalNode("transactionManager"));
           DataSourceFactory dsFactory = dataSourceElement(child.evalNode("dataSource"));
@@ -429,6 +432,13 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 判断environment的值是否与某一个<environment id=xxx>中id属性的值相同，只有相同的时候该<environment>才会被解析
+   * 注意：一个SqlSessionFactory对象只能有一个Environment，在实例化SqlSessionFactory的时候，可以指定一个environment的名称来选择使用哪一个
+   *      如果有多个数据源的话，需要为每一个数据源创建一个SqlSessionFactory
+   * @param id
+   * @return
+   */
   private boolean isSpecifiedEnvironment(String id) {
     if (environment == null) {
       throw new BuilderException("No environment specified.");

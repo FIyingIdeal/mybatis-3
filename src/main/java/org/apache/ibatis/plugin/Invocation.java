@@ -20,6 +20,11 @@ import java.lang.reflect.Method;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-1-12 16:21:40
+ * @function 这个类是对被代理对象和方法的封装，同时还负责了被代理方法的执行--迪米特法则
+ * @reference http://zhangbo-peipei-163-com.iteye.com/blog/2033832?utm_source=tuicool&utm_medium=referral
  */
 public class Invocation {
 

@@ -21,11 +21,21 @@ import java.util.List;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-1-12 15:43:06
+ * @reference http://zhangbo-peipei-163-com.iteye.com/blog/2033832?utm_source=tuicool&utm_medium=referral
+ * 有关Mybatis的拦截器原理参考上边的链接内容，由浅入深讲解非常详细和易懂
  */
 public class InterceptorChain {
 
   private final List<Interceptor> interceptors = new ArrayList<Interceptor>();
 
+  /**
+   * 获取代理对象，遍历所有的Interceptor定义，判断目标对象所属类是否被拦截，如果是的话就将其封装一下，所以最终返回的可能是一个经过多层代理的对象
+   * @param target
+   * @return
+   */
   public Object pluginAll(Object target) {
     for (Interceptor interceptor : interceptors) {
       target = interceptor.plugin(target);
