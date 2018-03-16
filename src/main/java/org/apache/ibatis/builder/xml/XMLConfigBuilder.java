@@ -99,6 +99,10 @@ public class XMLConfigBuilder extends BaseBuilder {
     return configuration;
   }
 
+  /**
+   * 用于解析mybatis-config.xml（可以是其他名称，此处取官网名字）配置文件中各个节点的信息保存到{@link Configuration}对象当中
+   * @param root
+   */
   private void parseConfiguration(XNode root) {
     try {
       //issue #117 read properties first
@@ -127,12 +131,12 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
     Properties props = context.getChildrenAsProperties();
     // Check that all settings are known to the configuration class
-    //确保每一个setting标签中的name属性的值在Configuration类中都有对应的setter/getter方法（或者说有对应的属性）
-    //MetaClass中会构造一个Reflector对象，这个对象就是指定了的一些相关信息，如对应的构造方法，setter/getter方法，对应的field
+    // 确保每一个setting标签中的name属性的值在Configuration类中都有对应的setter/getter方法（或者说有对应的属性）
+    // MetaClass中会构造一个Reflector对象，这个对象就是指定了的一些相关信息，如对应的构造方法，setter/getter方法，对应的field
     MetaClass metaConfig = MetaClass.forClass(Configuration.class, localReflectorFactory);
     for (Object key : props.keySet()) {
       if (!metaConfig.hasSetter(String.valueOf(key))) {
-        //判断setting标签中对应的name属性的值是否在Configuration类中有相应的setter方法，如果没有的话，就抛出异常
+        // 判断setting标签中对应的name属性的值是否在Configuration类中有相应的setter方法，如果没有的话，就抛出异常
         throw new BuilderException("The setting " + key + " is not known.  Make sure you spelled it correctly (case sensitive).");
       }
     }
@@ -156,20 +160,22 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void typeAliasesElement(XNode parent) {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
-        //<typeAliases>可以有两类子标签：<typeAlias>和<package>，
-        //如果为<package name="package name">的话，mybatis会自动扫描包内定义的JavaBean，然后分别为JavaBean注册一个小写字母开头的非完全限定的类名形式的别名
+        // <typeAliases>可以有两类子标签：<typeAlias>和<package>，
+        // 如果为<package name="package name">的话，mybatis会自动扫描包内定义的类，然后为非内部类和接口的其他类注册别名，注册规则是：
+        //    1. 如果该Bean使用@Alias注解指定了别名，则取该注解的value值为别名；
+        //    2. 如果没有使用@Alias标注，则别名为  类名.toLowerCase()
         if ("package".equals(child.getName())) {
           String typeAliasPackage = child.getStringAttribute("name");
           configuration.getTypeAliasRegistry().registerAliases(typeAliasPackage);
         } else {
-          //处理<typeAlias>子标签
+          // 处理<typeAlias>子标签
           String alias = child.getStringAttribute("alias");
           String type = child.getStringAttribute("type");
           try {
-            //根据type属性的值获取对应的Class对象
+            // 根据type属性的值获取对应的Class对象
             Class<?> clazz = Resources.classForName(type);
             if (alias == null) {
-              //如果为指定alias属性的话，会以type对应的Class类上@Alias注解值为alias，如果@Alias也没有找到的话，会抛出异常
+              // 如果未指定alias属性的话，会以type对应的Class类上@Alias注解值为alias，如果@Alias也没有找到的话，会抛出异常
               typeAliasRegistry.registerAlias(clazz);
             } else {
               typeAliasRegistry.registerAlias(alias, clazz);

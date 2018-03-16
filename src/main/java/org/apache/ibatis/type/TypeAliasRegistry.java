@@ -34,6 +34,9 @@ import org.apache.ibatis.io.Resources;
 
 /**
  * @author Clinton Begin
+ * @commentauthor yanchao
+ * @datetime 2018-3-16 17:00:16
+ * @function 别名注册组件
  */
 public class TypeAliasRegistry {
 
@@ -128,10 +131,16 @@ public class TypeAliasRegistry {
   public void registerAliases(String packageName, Class<?> superType){
     ResolverUtil<Class<?>> resolverUtil = new ResolverUtil<Class<?>>();
     resolverUtil.find(new ResolverUtil.IsA(superType), packageName);
+    // 获取packageName指定的包下的所有类的集合
     Set<Class<? extends Class<?>>> typeSet = resolverUtil.getClasses();
     for(Class<?> type : typeSet){
       // Ignore inner classes and interfaces (including package-info.java)
       // Skip also inner classes. See issue #6
+      // 如果是内部类（内部类包含有：静态内部类，成员内部类（非静态内部类），局部内部类和匿名内部类）或接口的话，直接跳过不注册别名
+      // Class类中包含有几个判断内部类方法：
+      //    isMemberClass() -- 静态内部类和成员内部类
+      //    isLocalClass()  -- 局部内部类
+      //    isAnonymousClass() -- 匿名内部类
       if (!type.isAnonymousClass() && !type.isInterface() && !type.isMemberClass()) {
         registerAlias(type);
       }

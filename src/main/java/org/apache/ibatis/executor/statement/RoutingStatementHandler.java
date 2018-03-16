@@ -31,9 +31,12 @@ import org.apache.ibatis.session.RowBounds;
 
 /**
  * @author Clinton Begin
+ * @commentAuthor yanchao
+ * @datetime 2018-3-14 10:24:47
+ * 这个类用于动态生成StatementHandler（由Configuration中调用），其中运用了两种设计模式：简单工厂模式（构造方法中）和静态代理模式
  */
 public class RoutingStatementHandler implements StatementHandler {
-
+  // 代理对象 ，代理BaseStatementHandler的子类
   private final StatementHandler delegate;
 
   public RoutingStatementHandler(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {

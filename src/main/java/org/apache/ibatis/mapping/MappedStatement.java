@@ -30,6 +30,9 @@ import org.apache.ibatis.session.Configuration;
 
 /**
  * @author Clinton Begin
+ * @commentauthor yanchao
+ * @datetime 2018-3-15 17:33:24
+ * @function 描述mapper文件中的sql(select/insert/update/delete)的节点信息，一条sql对应一个MappedStatement对象
  */
 public final class MappedStatement {
 
@@ -42,7 +45,7 @@ public final class MappedStatement {
   private ResultSetType resultSetType;
   private SqlSource sqlSource;
   private Cache cache;
-  private ParameterMap parameterMap;
+  private ParameterMap parameterMap;    // 保存sql中的参数集，其中每一个参数对应一个ParameterMapping对象
   private List<ResultMap> resultMaps;
   private boolean flushCacheRequired;
   private boolean useCache;

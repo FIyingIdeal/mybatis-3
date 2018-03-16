@@ -24,6 +24,9 @@ import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
  * @author Clinton Begin
+ * @commentauthor yanchao
+ * @datetime 2018-3-15 17:59:37
+ * @function 描述sql中的参数，一个参数对应一个该类的实例，如果一条sql中包含有多个参数的话，那这多个实例会被封装到{@link ParameterMap}中
  */
 public class ParameterMapping {
 

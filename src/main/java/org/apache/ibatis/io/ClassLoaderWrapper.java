@@ -101,8 +101,10 @@ public class ClassLoaderWrapper {
     return classForName(name, getClassLoaders(classLoader));
   }
 
-  /*
+  /**
    * Try to get a resource from a group of classloaders
+   * 尝试用一组classloader去加载一个文件（resource），当有一个classloader加载到以后就直接返回该资源
+   * 其中加载资源的顺序参考{@link ClassLoaderWrapper#getClassLoaders(ClassLoader)}
    *
    * @param resource    - the resource to get
    * @param classLoader - the classloaders to examine
