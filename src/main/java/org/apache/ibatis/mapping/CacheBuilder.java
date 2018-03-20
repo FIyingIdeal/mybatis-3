@@ -36,6 +36,8 @@ import org.apache.ibatis.reflection.SystemMetaObject;
 
 /**
  * @author Clinton Begin
+ * @commentauthor yanchao
+ * @datetime 2018-3-20 17:24:20
  */
 public class CacheBuilder {
   private String id;
@@ -89,16 +91,24 @@ public class CacheBuilder {
     return this;
   }
 
+  /**
+   * 构造Cache实例，这里使用了装饰器模式对原始PerpetualCache进行了层层封装，其在{@link CacheBuilder#setStandardDecorators(Cache)}中体现最明显
+   * @return
+   */
   public Cache build() {
     setDefaultImplementations();
+    // 构造原始的Cache实例 -- 如果<cache>标签中的type没有指定的话，默认就是构造PerpetualCache实例，id是当前mapper的namespace
     Cache cache = newBaseCacheInstance(implementation, id);
     setCacheProperties(cache);
     // issue #352, do not apply decorators to custom caches
     if (PerpetualCache.class.equals(cache.getClass())) {
       for (Class<? extends Cache> decorator : decorators) {
+        // 如果设置了装饰类（默认是LruCache），则先实例化该decorator，然后调用其含有Cache参数的构造方法将被装饰的Cache实例作为参数传入，生成一个被装饰好的Cache
         cache = newCacheDecoratorInstance(decorator, cache);
+        // 设置属性  但为什么上边设置完这里还要设置一次 or 为什么上边也要设置？？
         setCacheProperties(cache);
       }
+      // 根据<cache>中的属性设置，进行进一步的装饰，如设置了flushInterval属性，则会使用SerializedCache进行装饰
       cache = setStandardDecorators(cache);
     } else if (!LoggingCache.class.isAssignableFrom(cache.getClass())) {
       cache = new LoggingCache(cache);

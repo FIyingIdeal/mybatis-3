@@ -19,9 +19,14 @@ import org.apache.ibatis.cache.Cache;
 
 /**
  * @author Clinton Begin
+ * @commentauthor yanchao
+ * @datetime 2018-3-20 15:34:58
+ * @function 处理mapper中<cache-ref>，获取指定namespace中的cache配置，并设置为当前namespace的cache配置
  */
 public class CacheRefResolver {
+  // 当前mapper的MapperBuilderAssistant对象，保存了当前mapper的相关配置，并辅助构造相关组件
   private final MapperBuilderAssistant assistant;
+  // 被引用的Cache所在的namespace
   private final String cacheRefNamespace;
 
   public CacheRefResolver(MapperBuilderAssistant assistant, String cacheRefNamespace) {
@@ -29,6 +34,7 @@ public class CacheRefResolver {
     this.cacheRefNamespace = cacheRefNamespace;
   }
 
+  // 从configuration中获取指定命名空间下的Cache实例，并设置为当前命名空间的Cache（即保存到当前命名空间下的MapperBuilderAssistant对象中）
   public Cache resolveCacheRef() {
     return assistant.useCacheRef(cacheRefNamespace);
   }

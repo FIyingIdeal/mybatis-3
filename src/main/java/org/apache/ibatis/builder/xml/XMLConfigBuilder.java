@@ -144,6 +144,8 @@ public class XMLConfigBuilder extends BaseBuilder {
   }
 
   private void loadCustomVfs(Properties props) throws ClassNotFoundException {
+    // 获取settings中key为vfsImpl的值（自定义VFS的实现的类全限定名，以逗号分隔），如果存在的话根据逗号分隔后加载每一个指定的类
+    // VFS 是 virtual File System
     String value = props.getProperty("vfsImpl");
     if (value != null) {
       String[] clazzes = value.split(",");
@@ -197,7 +199,7 @@ public class XMLConfigBuilder extends BaseBuilder {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
         String interceptor = child.getStringAttribute("interceptor");
-        // 读取子标签的name和value属性到Properties对象中，这里就是对应<plugin>的<property>子标签中的name和value属性
+        // 读取<plugin>的子标签<property>的name和value属性到Properties对象中
         Properties properties = child.getChildrenAsProperties();
         Interceptor interceptorInstance = (Interceptor) resolveClass(interceptor).newInstance();
         interceptorInstance.setProperties(properties);
@@ -208,9 +210,13 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   private void objectFactoryElement(XNode context) throws Exception {
     if (context != null) {
+      // 获取type属性的值，其值为类全限名或一个已被注册的别名
       String type = context.getStringAttribute("type");
+      // 获取子标签<property name="key" value="value">中的值到一个Properties对象中，其形式为key=value
       Properties properties = context.getChildrenAsProperties();
+      // 获取类Class对象并实例化，如果type值是类全限定名的话，则【通过classLoader来加载】，是别名的话就通过别名来获取Class对象
       ObjectFactory factory = (ObjectFactory) resolveClass(type).newInstance();
+      // 设置属性
       factory.setProperties(properties);
       configuration.setObjectFactory(factory);
     }
@@ -288,9 +294,9 @@ public class XMLConfigBuilder extends BaseBuilder {
     configuration.setUseActualParamName(booleanValueOf(props.getProperty("useActualParamName"), true));
     configuration.setReturnInstanceForEmptyRow(booleanValueOf(props.getProperty("returnInstanceForEmptyRow"), false));
     configuration.setLogPrefix(props.getProperty("logPrefix"));
-    //设置日志框架，即需要配置一个类似<setting name="logImpl" value="STDOUT_LOGGING"/>的配置，name无需多说，
-    //value属性的值是可以指定为一个Log接口的实现类，而在Configuration类中的构造方法中注册了又很多别名，其中就包括了STDOUT_LOGGING
-    //所以value属性既可以指定为别名也可以指定为Log接口实现类的方法名
+    // 设置日志框架，即需要配置一个类似<setting name="logImpl" value="STDOUT_LOGGING"/>的配置，name无需多说，
+    // value属性的值是可以指定为一个Log接口的实现类，而在Configuration类中的构造方法中注册了又很多别名，其中就包括了STDOUT_LOGGING
+    // 所以value属性既可以指定为别名也可以指定为Log接口实现类的方法名
     @SuppressWarnings("unchecked")
     Class<? extends Log> logImpl = (Class<? extends Log>)resolveClass(props.getProperty("logImpl"));
     configuration.setLogImpl(logImpl);
@@ -323,25 +329,37 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+    /**
+     * 支持Mybatis根据不同的数据库厂商执行不同的语句的，此处用于获取实际使用的数据库类型并设置到Configuration对象当中
+     * @param context
+     * @throws Exception
+     */
   private void databaseIdProviderElement(XNode context) throws Exception {
     DatabaseIdProvider databaseIdProvider = null;
     if (context != null) {
       String type = context.getStringAttribute("type");
       // awful patch to keep backward compatibility
+      // DB_VENDOR对应的是VendorDatabaseIdProvider类。
+      // 该类的getDatabaseId(DataSource)方法是通过DataSource来读取数据库元数据DatabaseMetaData，并通过getDatabaseProductName()方法获取数据库名称的
       if ("VENDOR".equals(type)) {
           type = "DB_VENDOR";
       }
+      // 读取子标签<property>到Properties对象中。<property>中的配置相当于给各类数据库起了别名
       Properties properties = context.getChildrenAsProperties();
+      // 实例化type属性指定的类
       databaseIdProvider = (DatabaseIdProvider) resolveClass(type).newInstance();
+      // 设置别名
       databaseIdProvider.setProperties(properties);
     }
     Environment environment = configuration.getEnvironment();
     if (environment != null && databaseIdProvider != null) {
+      // 获取实际使用的数据库类型
       String databaseId = databaseIdProvider.getDatabaseId(environment.getDataSource());
       configuration.setDatabaseId(databaseId);
     }
   }
 
+  // 事务管理器解析
   private TransactionFactory transactionManagerElement(XNode context) throws Exception {
     if (context != null) {
       String type = context.getStringAttribute("type");
@@ -353,6 +371,7 @@ public class XMLConfigBuilder extends BaseBuilder {
     throw new BuilderException("Environment declaration requires a TransactionFactory.");
   }
 
+  // 数据源解析
   private DataSourceFactory dataSourceElement(XNode context) throws Exception {
     if (context != null) {
       String type = context.getStringAttribute("type");
@@ -372,12 +391,12 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void typeHandlerElement(XNode parent) throws Exception {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
-        //处理使用<package>指定的TypeHandlers，会扫描指定包下的所有TypeHandler实现类，然后查找类上的@MappedTypes和@MappedJdbcTypes注解
+        // 处理使用<package>指定的TypeHandlers，会扫描指定包下的所有TypeHandler实现类，然后查找类上的@MappedTypes和@MappedJdbcTypes注解
         if ("package".equals(child.getName())) {
           String typeHandlerPackage = child.getStringAttribute("name");
           typeHandlerRegistry.register(typeHandlerPackage);
         } else {
-          //处理使用<typeHandler>指定的TypeHandler
+          // 处理使用子标签<typeHandler>指定的TypeHandler
           String javaTypeName = child.getStringAttribute("javaType");
           String jdbcTypeName = child.getStringAttribute("jdbcType");
           String handlerTypeName = child.getStringAttribute("handler");
@@ -402,6 +421,7 @@ public class XMLConfigBuilder extends BaseBuilder {
    * 注册mapper
    * 如果是使用<package>或<mapper class=xxx>，会将package中的相关类或class指定的类添加到{@link Configuration#mapperRegistry}中
    * 如果使用<mapper resource=xxx>或<mapper url=xxx>，会对指定的xml文件或url指定的文件进行解析
+   * 解析以后也会将该mapper对应的namespace添加到{@link Configuration#mapperRegistry}中（此处见{@link XMLMapperBuilder#bindMapperForNamespace()}）
    * @param parent
    * @throws Exception
    */
@@ -430,7 +450,7 @@ public class XMLConfigBuilder extends BaseBuilder {
             Class<?> mapperInterface = Resources.classForName(mapperClass);
             configuration.addMapper(mapperInterface);
           } else {
-            //在<mapper>标签中，url、resource和class属性只能出现一个，不能同时出现多个
+            // 在<mapper>标签中，url、resource和class属性只能出现一个，不能同时出现多个
             throw new BuilderException("A mapper element may only specify a url, resource or class, but not more than one.");
           }
         }

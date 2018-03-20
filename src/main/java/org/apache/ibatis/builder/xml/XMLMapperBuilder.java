@@ -89,9 +89,12 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   /**
    * 这个方法做了以下几个事情：
-   *  1. 判断当前的resource（是一个mapper文件的路径名）是否已被解析
-   *      1.1 如果未解析，先对整个mapper配置文件进行解析；
+   *  1. 判断当前的resource（是一个mapper文件的路径名）是否已被解析，如果未被解析则执行下边的步骤：
+   *      1.1 对整个mapper配置文件进行解析；
    *      1.2 解析完成将这个resource添加到{@link Configuration#loadedResources}（已解析列表）当中；
+   *      1.3 bindMapperForNamespace() 这个方法实现比较简单，但不知如何描述其作用...其中一步骤是将XML mapper注册到{@link Configuration#mapperRegistry}中
+   *  2. 尝试重新解析解析失败的<resultMap/><cache-ref/>及sql语句相关标签（<select><insert><update><delete>）
+   *     解析失败是因为多个mapper文件之间存在引用关系，而被引用的mapper文件还没有被解析
    */
   public void parse() {
     // 如果resource未解析，先进行解析
@@ -103,6 +106,8 @@ public class XMLMapperBuilder extends BaseBuilder {
       bindMapperForNamespace();
     }
 
+    // 这里的几个parsePendingXXX()方法是用来重新解析之前解析失败的对应组件
+    // 解析失败是因为多个mapper文件之间存在存在引用关系，而被引用的mapper文件还没有被解析
     parsePendingResultMaps();
     parsePendingChacheRefs();
     parsePendingStatements();
@@ -114,7 +119,7 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   private void configurationElement(XNode context) {
     try {
-      // namespace是必须指定的，如果没有指定的话将会抛出异常
+      // 获取<mapper>标签的namespace属性，该属性是必须的，如果没有指定的话将会抛出异常
       String namespace = context.getStringAttribute("namespace");
       if (namespace == null || namespace.equals("")) {
         throw new BuilderException("Mapper's namespace cannot be empty");
@@ -185,7 +190,7 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
   /**
-   * 尝试重新解析之前解析失败的<parameterMap>
+   * 尝试重新解析之前解析失败的sql语句相关标签，如<select><insert><update><delete>
    */
   private void parsePendingStatements() {
     Collection<XMLStatementBuilder> incompleteStatements = configuration.getIncompleteStatements();
@@ -202,11 +207,17 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 解析<cache-ref>标签，
+   * @param context
+   */
   private void cacheRefElement(XNode context) {
     if (context != null) {
+      // 将cache-ref保存到configuration对象中，第一个参数表示当前namespace，第二个参数是引用的namespace
       configuration.addCacheRef(builderAssistant.getCurrentNamespace(), context.getStringAttribute("namespace"));
       CacheRefResolver cacheRefResolver = new CacheRefResolver(builderAssistant, context.getStringAttribute("namespace"));
       try {
+        // 从configuration中获取指定namespace中的cache配置，并设置为当前namespace的cache配置
         cacheRefResolver.resolveCacheRef();
       } catch (IncompleteElementException e) {
         configuration.addIncompleteCacheRef(cacheRefResolver);
@@ -214,17 +225,35 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 解析<cache>标签
+   * @param context
+   * @throws Exception
+   */
   private void cacheElement(XNode context) throws Exception {
     if (context != null) {
+      /**
+       * 解析<cache>的type属性，它用来指定一个Cache的实现类，该Cache必须实现了{@link Cache}接口
+       * 如果没有指定的话，默认取"PERPETUAL"，它是{@link org.apache.ibatis.cache.impl.PerpetualCache}的别名，是Mybatis提供的一个Cache实现
+       */
       String type = context.getStringAttribute("type", "PERPETUAL");
       Class<? extends Cache> typeClass = typeAliasRegistry.resolveAlias(type);
+      // 解析<cache>的eviction（收回策略）属性，默认是LRU，即最近最少使用
+      // Mybatis提供的缓存收回策略包括：LRU(最近最少使用 LruCache.java)，FIFO(先进先出 FifoCache.java)，SOFT(软引用 SoftCache.java)，WEAK(弱引用 WeakCache.java)
       String eviction = context.getStringAttribute("eviction", "LRU");
+      // 这些收回策略也都是一个实现了Cache接口的类，在此获取其对应的Class对象
       Class<? extends Cache> evictionClass = typeAliasRegistry.resolveAlias(eviction);
+      // 解析<cache>的flushInterval（刷新间隔）属性，默认情况是不设置,也就是没有刷新间隔,缓存仅仅调用语句时刷新
       Long flushInterval = context.getLongAttribute("flushInterval");
+      // 解析<cache>的size（引用数目）属性，默认值是1024。这个值是在LruCache.java中指定的，在通过CacheBuilder生成Cache实例的时候会设置一个装饰器Decorator，默认是LruCache
       Integer size = context.getIntAttribute("size");
+      // 解析<cache>的readOnly（只读）属性，只读的缓存会给所有调用者返回缓存对象的相同实例。因此这些对象不能被修改。这提供了很重要的性能优势。
+      // 可读写的缓存 会返回缓存对象的拷贝(通过序列化) 。这会慢一些,但是安全,因此默认是 false
       boolean readWrite = !context.getBooleanAttribute("readOnly", false);
+      // 这个属性...官网没有提到...
       boolean blocking = context.getBooleanAttribute("blocking", false);
       Properties props = context.getChildrenAsProperties();
+      // 构造Cache实例，并保存到configuration对象中，设置为当前Mapper的Cache
       builderAssistant.useNewCache(typeClass, evictionClass, flushInterval, size, readWrite, blocking, props);
     }
   }
@@ -293,7 +322,8 @@ public class XMLMapperBuilder extends BaseBuilder {
     String id = resultMapNode.getStringAttribute("id",
         resultMapNode.getValueBasedIdentifier());
     // 由dtd描述可知，<resultMap>可拥有的属性(ATTLIST)只包括id,type,extends,autoMapping，且id与type是必须项
-    // 但这里为什么会取ofType,resultType,javaType的属性值呢？因为这个方法不仅在解析<resultMap>时会被调用，在解析<association>、<collection>、<case>的时候也会被调用
+    // 但这里为什么会取ofType,resultType,javaType的属性值呢？
+    // 因为这个方法不仅在解析<resultMap>时会被调用，在解析<association>、<collection>、<case>的时候也会被调用
     // type是<resultMap>中的属性
     String type = resultMapNode.getStringAttribute("type",
         // ofType是<collection>中的属性，在解析<collection>的时候这个方法可能会有返回值（这个属性是非必须的）
@@ -304,7 +334,7 @@ public class XMLMapperBuilder extends BaseBuilder {
                 resultMapNode.getStringAttribute("javaType"))));
     String extend = resultMapNode.getStringAttribute("extends");
     Boolean autoMapping = resultMapNode.getBooleanAttribute("autoMapping");
-    ////解析resultMap的属性值结束////
+    ////解析<resultMap>标签的属性值结束////
 
     Class<?> typeClass = resolveClass(type);
     Discriminator discriminator = null;
@@ -313,9 +343,9 @@ public class XMLMapperBuilder extends BaseBuilder {
 
     ////解析<resultMap>标签的子标签开始////
     List<XNode> resultChildren = resultMapNode.getChildren();
-    //在mybatis-3-mapper.dtd中对<resultMap>的描述中指定了其可拥有的元素/子标签(ELEMENT)包括(constructor?,id*,result*,association*,collection*, discriminator?)
-    //其中 ? 代表可以出现零或一次， * 代表可以出现零或多次，即<constructor>和<discriminator>只能出现一次，而其他标签可以出现多次
-    //从这个for循环可以知道，除了<constructor>和<discriminator>标签外，<resultMap>中其他的子标签都被解析成了一个ResultMapping对象
+    // 在mybatis-3-mapper.dtd中对<resultMap>的描述中指定了其可拥有的元素/子标签(ELEMENT)包括(constructor?,id*,result*,association*,collection*, discriminator?)
+    // 其中 ? 代表可以出现零或一次， * 代表可以出现零或多次，即<constructor>和<discriminator>只能出现一次，而其他标签可以出现多次
+    // 从这个for循环可以知道，除了<constructor>和<discriminator>标签外，<resultMap>中其他的子标签都被解析成了一个ResultMapping对象
     for (XNode resultChild : resultChildren) {
       if ("constructor".equals(resultChild.getName())) {
         processConstructorElement(resultChild, typeClass, resultMappings);

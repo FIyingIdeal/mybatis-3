@@ -110,6 +110,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
     }
     try {
       unresolvedCacheRef = true;
+      // 从configuration中找到指定namespace下的Cache。保存这两者关系的是一个Map(namespace, Cache)
       Cache cache = configuration.getCache(namespace);
       if (cache == null) {
         throw new IncompleteElementException("No cache for namespace '" + namespace + "' could be found.");
@@ -131,6 +132,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
       Properties props) {
     Cache cache = new CacheBuilder(currentNamespace)
         .implementation(valueOrDefault(typeClass, PerpetualCache.class))
+        // 设置了一个装饰器，默认是LruCache
         .addDecorator(valueOrDefault(evictionClass, LruCache.class))
         .clearInterval(flushInterval)
         .size(size)
@@ -138,7 +140,9 @@ public class MapperBuilderAssistant extends BaseBuilder {
         .blocking(blocking)
         .properties(props)
         .build();
+    // 保存到configuration对象中
     configuration.addCache(cache);
+    // 设置为当前Mapper的Cache
     currentCache = cache;
     return cache;
   }
