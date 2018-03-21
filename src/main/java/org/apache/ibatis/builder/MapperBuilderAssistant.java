@@ -188,6 +188,14 @@ public class MapperBuilderAssistant extends BaseBuilder {
     id = applyCurrentNamespace(id, false);
     extend = applyCurrentNamespace(extend, true);
 
+    // 可以使用extends来引用其他的<resultMap>，这里会将被引用的ResultMap中的RequestMappings合并
+    // 到当前的RequestMapping集合中，合并前会去重。注意：RequestMapping对equals方法进行了重写
+    // 只要两个RequestMapping对应的property不为空且equal，那这两个RequestMapping对象也相等
+    // ResultMapping.Builder builder = new ResultMapping.Builder(new Configuration(), "A");
+    // ResultMapping mapping1 = builder.column("column").nestedQueryId("queryId").build();
+    // ResultMapping.Builder builder2 = new ResultMapping.Builder(new Configuration(), "A");
+    // ResultMapping mapping2 = builder2.column("column3").nestedQueryId("queryId3").build();
+    // System.out.println(mapping1.equals(mapping2));   // true
     if (extend != null) {
       /**
        * extends后边的resultMap如果没有找到（即还没有被解析，有可能定义在了后边或引用了其他地方的resultMap）的话会抛出IncompleteElementException异常
@@ -199,6 +207,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
       }
       ResultMap resultMap = configuration.getResultMap(extend);
       List<ResultMapping> extendedResultMappings = new ArrayList<ResultMapping>(resultMap.getResultMappings());
+      // 去重，因为RequestMapping的equals方法进行了重写，只要property相同的两个RequestMapping对象就equal
       extendedResultMappings.removeAll(resultMappings);
       // Remove parent constructor if this resultMap declares a constructor.
       boolean declaresConstructor = false;

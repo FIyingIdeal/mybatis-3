@@ -27,6 +27,17 @@ import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
  * @author Clinton Begin
+ * @commentauthor yanchao
+ * @datetime 2018-3-21 14:43:57
+ * @function 构建ResultMap（mapper文件中的<resultMap>标签）的基本元素，每一个ResultMapping对象都与<resultMap>中的一个“最内层子节点”相对应
+ *            如 <resultMap>
+ *                 <constructor>
+ *                     <idArg/>   <!-- 会被构建成一个ResultMapping对象 -->
+ *                     <arg/>     <!-- 会被构建成一个ResultMapping对象 -->
+ *                 </constructor>
+ *                 <id/>          <!-- 会被构建成一个ResultMapping对象 -->
+ *                 <result/>      <!-- 会被构建成一个ResultMapping对象 -->
+ *              <resultMap/>
  */
 public class ResultMapping {
 
@@ -250,7 +261,13 @@ public class ResultMapping {
   public void setLazy(boolean lazy) {
     this.lazy = lazy;
   }
-  
+
+  /**
+   * 重写了equals方法，只要两个都是同一个ClassLoader加载的RequestMapping类生成的对象
+   * 且两个的property属性存在且equals，那这两个RequestMapping对象就equal
+   * @param o
+   * @return
+   */
   @Override
   public boolean equals(Object o) {
     if (this == o) {

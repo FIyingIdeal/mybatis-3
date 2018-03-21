@@ -73,6 +73,19 @@ public class XNode {
     return builder.toString();
   }
 
+  /**
+   * 为一个节点构建一个字符串类型的层级关系，用来确定这个节点在XML中的位置，一般用于嵌套标签中没有id属性的标签的标识
+   * 其中 _ 用来分隔节点名字，[]中包含当前节点的id或value或property属性的值，当有可能存在多个属性且都不为空时，其优先级高到低为id>value>property
+   * 形如：mapper_resultMap[userMaster]_discriminator_case[test]的mapper文件配置为
+   * <mapper>
+   *     <resultMap id="userMaster">
+   *         <discriminator>
+   *             <case value="test"/>
+   *         </discriminator>
+   *     </resultMap>
+   * </mapper>
+   * @return
+   */
   public String getValueBasedIdentifier() {
     StringBuilder builder = new StringBuilder();
     XNode current = this;

@@ -320,6 +320,10 @@ public class XMLMapperBuilder extends BaseBuilder {
 
     ////解析<resultMap>标签的属性值开始////
     String id = resultMapNode.getStringAttribute("id",
+        // 这个方法会构建一个节点在mapper文件中的层级关系来确定其在mapper文件中的位置，一般用于嵌套标签中没有id属性的标签的标识
+        // 其中 _ 用来分隔节点名字，[]中包含当前节点的id或value或property属性的值，当有可能存在多个属性且都不为空时，其优先级高到低为id>value>property
+        // 形如：mapper_resultMap[userMaster]_discriminator_case[test]的mapper文件配置为
+        // <mapper><resultMap id="userMaster"><discriminator><case value="test"/></discriminator></resultMap></mapper>
         resultMapNode.getValueBasedIdentifier());
     // 由dtd描述可知，<resultMap>可拥有的属性(ATTLIST)只包括id,type,extends,autoMapping，且id与type是必须项
     // 但这里为什么会取ofType,resultType,javaType的属性值呢？
@@ -345,11 +349,13 @@ public class XMLMapperBuilder extends BaseBuilder {
     List<XNode> resultChildren = resultMapNode.getChildren();
     // 在mybatis-3-mapper.dtd中对<resultMap>的描述中指定了其可拥有的元素/子标签(ELEMENT)包括(constructor?,id*,result*,association*,collection*, discriminator?)
     // 其中 ? 代表可以出现零或一次， * 代表可以出现零或多次，即<constructor>和<discriminator>只能出现一次，而其他标签可以出现多次
-    // 从这个for循环可以知道，除了<constructor>和<discriminator>标签外，<resultMap>中其他的子标签都被解析成了一个ResultMapping对象
+    // 从这个for循环可以知道，<resultMap>中的相关子标签（可以说是含有元素的标签，如<id>,<result>,<constructor>[不包含它自己本身]中的<idArg>和<arg>）都会被解析成一个ResultMapping对象
     for (XNode resultChild : resultChildren) {
       if ("constructor".equals(resultChild.getName())) {
+        // 解析<resultMap>子标签<constructor>
         processConstructorElement(resultChild, typeClass, resultMappings);
       } else if ("discriminator".equals(resultChild.getName())) {
+        // 解析<discriminator>
         discriminator = processDiscriminatorElement(resultChild, typeClass, resultMappings);
       } else {
         List<ResultFlag> flags = new ArrayList<ResultFlag>();
@@ -376,7 +382,7 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
   /**
-   * 解析<resultMap>子元素<constructor>
+   * 解析<resultMap>子元素<constructor>，将其子节点<idArg>及<arg>解析成一个RequestMapping对象添加到集合中
    * 在mybatis-3-mapper.dtd中对<constructor>的描述中指定了其可拥有的元素/子标签(ELEMENT)包括(idArg*,arg*)，不包含任何属性
    * @param resultChild <constructor>对应的XNode对象
    * @param resultType 对应<resultMap>中的type属性，即对应一个select查询的返回类型
@@ -384,6 +390,7 @@ public class XMLMapperBuilder extends BaseBuilder {
    * @throws Exception
    */
   private void processConstructorElement(XNode resultChild, Class<?> resultType, List<ResultMapping> resultMappings) throws Exception {
+    // 获取<constructor>的子节点
     List<XNode> argChildren = resultChild.getChildren();
     for (XNode argChild : argChildren) {
       List<ResultFlag> flags = new ArrayList<ResultFlag>();
@@ -424,9 +431,8 @@ public class XMLMapperBuilder extends BaseBuilder {
     //    属性(attr)          ： value,resultMap,resultType
     Map<String, String> discriminatorMap = new HashMap<String, String>();
     for (XNode caseChild : context.getChildren()) {
-      // 这里看似没有对resultType的解析，实际是在processNestedResultMappings(XNode, List)方法中进行了，
-      // TODO 这里只对<case>标签的属性进行了解析，但还没有发现对其子标签解析的过程
       String value = caseChild.getStringAttribute("value");
+      // processNestedResultMappings(XNode, List)方法中有对<case>子标签的解析，将构造好的RequestMapping对象添加到了对应的集合中
       String resultMap = caseChild.getStringAttribute("resultMap", processNestedResultMappings(caseChild, resultMappings));
       discriminatorMap.put(value, resultMap);
     }
@@ -498,6 +504,7 @@ public class XMLMapperBuilder extends BaseBuilder {
   private ResultMapping buildResultMappingFromContext(XNode context, Class<?> resultType, List<ResultFlag> flags) throws Exception {
     String property;
     if (flags.contains(ResultFlag.CONSTRUCTOR)) {
+      // 从mybatis3.4.3开始<constructor>的子节点<iaArg>和<arg>中支持name属性，这样的话可以在指定参数名称的前提下，以任意顺序编写 arg 元素（之前必须按顺序）
       property = context.getStringAttribute("name");
     } else {
       property = context.getStringAttribute("property");
@@ -536,8 +543,9 @@ public class XMLMapperBuilder extends BaseBuilder {
     if ("association".equals(context.getName())
         || "collection".equals(context.getName())
         || "case".equals(context.getName())) {
+      // <collection>中可以有select标签，如果使用select引用了其他的查询，那么其结果映射将由这个被引用的select来处理，而这里就不用解析处理了
       if (context.getStringAttribute("select") == null) {
-        //解析<association>、<collection>或<case>标签中type相关的属性（resultMap、resultType、ofType、javaType）
+        // 解析<association>、<collection>或<case>标签中type相关的属性（resultMap、resultType、ofType、javaType）
         ResultMap resultMap = resultMapElement(context, resultMappings);
         return resultMap.getId();
       }
