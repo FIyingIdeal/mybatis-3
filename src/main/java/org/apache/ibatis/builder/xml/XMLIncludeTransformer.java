@@ -30,6 +30,7 @@ import org.w3c.dom.NodeList;
 
 /**
  * @author Frank D. Martinez [mnesarco]
+ * @datetime 2018-3-22 17:09:52
  */
 public class XMLIncludeTransformer {
 
@@ -60,8 +61,8 @@ public class XMLIncludeTransformer {
    * @param source Include node in DOM tree
    * @param variablesContext Current context for static variables with values
    *
-   * 从上边的注释中可以知道，这个方法会被递归调用，用来解析<select><update><delete><insert>中的<include>的过程，即拼接sql的过程
-   * 只是部分sql的拼接，其结果还不是最终要执行的sql
+   * 从上边的注释中可以知道，这个方法会被递归调用，用来解析<select><update><delete><insert>中的<include>的过程
+   * 其解析结果是用<include>所引用的<sql>标签中的sql片段将<include>标签替换掉
    */
   private void applyIncludes(Node source, final Properties variablesContext, boolean included) {
     // 解析<include>标签，其解析可参考以下这段配置：
@@ -89,18 +90,25 @@ public class XMLIncludeTransformer {
       // 先获取<include>标签的refid属性的值（可能是一个对Properties文件中变量的引用，如果是的话会先解析获取变量对应的值）
       // 然后获取对应的<sql>标签对应的Node对象。这个是之前解析<sql>标签的时候保存到configuration中的。
       Node toInclude = findSqlFragment(getStringAttribute(source, "refid"), variablesContext);
-      // 解析<include>标签中包含的<property>标签，并构建一个Properties对象。如果没有<property>标签的话，将会返回第二个参数对应的Properties对象
+      // 解析<include>标签中包含的<property>标签，并构建一个Properties对象，然后与第二个参数对应的Properties合并返回
+      // 如果没有<property>标签的话，将会返回第二个参数对应的Properties对象
       Properties toIncludeContext = getVariablesContext(source, variablesContext);
-      // 递归调用来解析通过refid引用的<sql>标签
+      // 递归调用来解析<include>通过refid引用的<sql>标签
       applyIncludes(toInclude, toIncludeContext, true);
-      // 以下是sql的拼接过程，即替换<select><update><delete><insert><sql>等标签中的<include>的过程
+      // 判断<include>是否是从其他mapper文件中引用的<sql>标签，是的话就引入
       if (toInclude.getOwnerDocument() != source.getOwnerDocument()) {
         toInclude = source.getOwnerDocument().importNode(toInclude, true);
       }
+      //// 以下是sql的拼接过程，即替换<select><update><delete><insert><sql>等标签中的<include>的过程  ////
+      // replaceChild(Node newNode, Node oldNode)是用newNode替换oldNode的，这里toInclude是被引用的<sql>标签
+      // 即这里在<include>父标签【getParentNode()】中使用<sql>（debug可以看到toInclude的firstChild是<sql>中包含的sql片段）替换掉了<include>
       source.getParentNode().replaceChild(toInclude, source);
       while (toInclude.hasChildNodes()) {
+        // 如果toInclude（即<sql>标签）中还有其他ChildNode（包括textNode），就将其遍历出来插到其前边
+        // 这里是将<sql>中的sql片段插到了<sql>标签前边（在下边会移除掉<sql>标签）
         toInclude.getParentNode().insertBefore(toInclude.getFirstChild(), toInclude);
       }
+      // 移除<sql>标签，其中的sql片段已经在上边被拼接好了
       toInclude.getParentNode().removeChild(toInclude);
     } else if (source.getNodeType() == Node.ELEMENT_NODE) {
       // 这里已知的可以解析的元素有 <sql> (其他的还没有看到，TODO 看到后随时填充)
@@ -111,7 +119,8 @@ public class XMLIncludeTransformer {
       }
     } else if (included && source.getNodeType() == Node.TEXT_NODE
         && !variablesContext.isEmpty()) {
-      // 解析TEXT_NODE（开始标签和关闭标签之间的文本），主要是用来将TEXT_NODE中对Properties文件或<property>标签定义的属性的引用进行替换
+      // 解析TEXT_NODE（开始标签和关闭标签之间的文本），主要是用来将TEXT_NODE中通过${}对Properties文件或<property>标签定义的属性的引用进行替换
+      // 但这里只解析通过<include>引用的<sql>中的变量（前边的included变量来控制...）why?
       // replace variables ins all text nodes
       source.setNodeValue(PropertyParser.parse(source.getNodeValue(), variablesContext));
     }
@@ -124,10 +133,11 @@ public class XMLIncludeTransformer {
    * @return
    */
   private Node findSqlFragment(String refid, Properties variables) {
-    // 对Properties文件中变量引用的解析
+    // 对Properties文件中变量引用的解析，也就是说这里的refid可以是一个${}表示的变量，配置到properties文件当中
     refid = PropertyParser.parse(refid, variables);
     refid = builderAssistant.applyCurrentNamespace(refid, true);
     try {
+      // 从configuration中获取指定id对应的<sql id="">标签
       XNode nodeToInclude = configuration.getSqlFragments().get(refid);
       return nodeToInclude.getNode().cloneNode(true);
     } catch (IllegalArgumentException e) {

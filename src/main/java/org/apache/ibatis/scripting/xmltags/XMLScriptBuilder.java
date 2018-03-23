@@ -31,6 +31,7 @@ import org.w3c.dom.NodeList;
 
 /**
  * @author Clinton Begin
+ * @datetime 2018-3-23 17:41:35
  */
 public class XMLScriptBuilder extends BaseBuilder {
 
@@ -52,6 +53,7 @@ public class XMLScriptBuilder extends BaseBuilder {
     List<SqlNode> contents = parseDynamicTags(context);
     MixedSqlNode rootSqlNode = new MixedSqlNode(contents);
     SqlSource sqlSource = null;
+    // 构建SqlSource对象
     if (isDynamic) {
       sqlSource = new DynamicSqlSource(configuration, rootSqlNode);
     } else {
@@ -61,8 +63,15 @@ public class XMLScriptBuilder extends BaseBuilder {
   }
 
   /**
-   * sql中动态标签解析，如<trim><where><foreach><if>等
-   * @param node 这个对应mapper中的<select><update><insert><delete>等标签
+   * 这个方法准确说是处理<select>sql配置<select/>或其他sql相关标签中的【sql配置】那部分的。
+   * 此时传入的参数node是已经将<include>和<selectKey>标签解析移除过的，但动态标签还没有处理。
+   * 但在移除<include>的时候sql会被切分成各个小的片段，每一个小片段对应一个XML的Node对象（TEXT_NODE类型）
+   * 而这些Node对象及动态标签等其他元素组成一个大的Node并被封装到了参数XNode中（描述可能不太准确，有关XML解析这块还待加强），所以这里会处理两种Node：
+   *     1. 非动态标签的TEXT_NODE，每一个TEXT_NODE都会被封装成一个TextSqlNode对象（如果TEXT_NODE中没有使用${}引入参数，那没会被封装成StaticTextSqlNode）；
+   *     2. 解析处理动态标签，如<trim><where><foreach><if>等。根据标签名选择对应的Handler来解析并封装成一个对应的SqlNode对象；
+   * 上述两步生成的所有SqlNode都会被添加到一个List中返回给调用者，调用则据此在构建一个MixedSqlNode对象
+   *
+   * @param node 这个对应mapper中的<select><update><insert><delete>等标签内容封装成的XNode对象
    * @return
    */
   List<SqlNode> parseDynamicTags(XNode node) {
@@ -71,9 +80,12 @@ public class XMLScriptBuilder extends BaseBuilder {
     for (int i = 0; i < children.getLength(); i++) {
       XNode child = node.newXNode(children.item(i));
       if (child.getNode().getNodeType() == Node.CDATA_SECTION_NODE || child.getNode().getNodeType() == Node.TEXT_NODE) {
-        // 处理  CDATA_SECTION_NODE或TEXT_NODE
+        // 处理 CDATA_SECTION_NODE或TEXT_NODE
+        // 这里需要注意一点的是回车换行也会被认为是一个TEXT_NODE，同样会被封装成一个SqlNode
         String data = child.getStringBody("");
         TextSqlNode textSqlNode = new TextSqlNode(data);
+        // 这里判断isDynamic只是判断sql片段中是否有用${}包含起来的参数，而不是平时提到的诸如<where>等之类的动态标签（在下边的else if 中判断）
+        // 且对于sql中的参数#{name}不会进行处理，这种情况isDynamic()返回的也是false
         if (textSqlNode.isDynamic()) {
           contents.add(textSqlNode);
           isDynamic = true;
@@ -81,12 +93,15 @@ public class XMLScriptBuilder extends BaseBuilder {
           contents.add(new StaticTextSqlNode(data));
         }
       } else if (child.getNode().getNodeType() == Node.ELEMENT_NODE) { // issue #628
-        // 处理动态标签
+        //// 处理诸如<where>等动态标签 ////
+        // 获取标签名
         String nodeName = child.getNode().getNodeName();
+        // 根据标签名获取其对应的NodeHandler
         NodeHandler handler = nodeHandlers(nodeName);
         if (handler == null) {
           throw new BuilderException("Unknown element <" + nodeName + "> in SQL statement.");
         }
+        // 调用NodeHandler#handleNode(XNode, List)方法处理动态标签
         handler.handleNode(child, contents);
         isDynamic = true;
       }
@@ -199,9 +214,14 @@ public class XMLScriptBuilder extends BaseBuilder {
 
     @Override
     public void handleNode(XNode nodeToHandle, List<SqlNode> targetContents) {
+      // 解析<if></if>中的sql片段，并构建一个MixedSqlNode（在mybatis3.4.6中parseDynamicTags(XNode)直接返回一个MixedSqlNode对象）
       List<SqlNode> contents = parseDynamicTags(nodeToHandle);
       MixedSqlNode mixedSqlNode = new MixedSqlNode(contents);
+      // 解析<if>中的test属性
       String test = nodeToHandle.getStringAttribute("test");
+      // 将test条件与解析过的sql片段封装成一个IfSqlNode对象添加到集合中，拼接sql的时候会做统一的处理。
+      // 但需要注意的一点是这个集合可能是外层标签的集合，如<where><if></if></where>，这里第二个参数是where中构建的list（不知道如何表示，这里其实是一个parseDynamicTags()方法的递归）
+      // 这里还没有参数来判断test条件的真假，所以统一将其添加到list中待后续处理
       IfSqlNode ifSqlNode = new IfSqlNode(mixedSqlNode, test);
       targetContents.add(ifSqlNode);
     }

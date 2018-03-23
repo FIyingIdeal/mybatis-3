@@ -19,6 +19,10 @@ import java.util.List;
 
 /**
  * @author Clinton Begin
+ * @commentauthor yanchao
+ * @datetime 2018-3-23 14:10:50
+ * @function 由其名字可以看出来是混合的SqlNode集合，各种SqlNode会被保存到实例对象contexts中。
+ *           TODO （描述不然清晰） 至于apply(DynamicContext)方法会对每一类SqlNode进行相应的处理，然后将处理后的sql片段拼接
  */
 public class MixedSqlNode implements SqlNode {
   private List<SqlNode> contents;

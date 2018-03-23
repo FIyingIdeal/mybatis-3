@@ -94,11 +94,14 @@ public class XMLStatementBuilder extends BaseBuilder {
     // 获取标签名： select  update  insert  delete
     String nodeName = context.getNode().getNodeName();
     SqlCommandType sqlCommandType = SqlCommandType.valueOf(nodeName.toUpperCase(Locale.ENGLISH));
+    // 判断是否是select操作
     boolean isSelect = sqlCommandType == SqlCommandType.SELECT;
-    // 如果执行的是select操作的话，且未配置flushCache的情况下，flushCache = false，即默认不清空缓存，其他操作（如insert、Update、delete）的话默认会清空缓存
+    // 如果执行的是select操作的话，且未配置flushCache的情况下，flushCache = false，即默认不清空缓存
+    // 其他操作（如insert、update、delete）的话默认会清空缓存，即flushCache = true
     boolean flushCache = context.getBooleanAttribute("flushCache", !isSelect);
     // 如果执行的是Select操作的话，且未配置useCache的情况下，useCache = true，即使用缓存，其他操作不使用缓存
     boolean useCache = context.getBooleanAttribute("useCache", isSelect);
+    // 这个设置仅针对嵌套结果 select 语句适用，具体参考官网说明
     boolean resultOrdered = context.getBooleanAttribute("resultOrdered", false);
 
     // Include Fragments before parsing
@@ -120,6 +123,7 @@ public class XMLStatementBuilder extends BaseBuilder {
     KeyGenerator keyGenerator;
     String keyStatementId = id + SelectKeyGenerator.SELECT_KEY_SUFFIX;
     keyStatementId = builderAssistant.applyCurrentNamespace(keyStatementId, true);
+    // 判断configuration中是否存在指定keyStatementId的<selectKey>（其注册是在上边的processSelectKeyNodes()方法中进行的）
     if (configuration.hasKeyGenerator(keyStatementId)) {
       keyGenerator = configuration.getKeyGenerator(keyStatementId);
     } else {
@@ -144,6 +148,7 @@ public class XMLStatementBuilder extends BaseBuilder {
 
   private void processSelectKeyNodes(String id, Class<?> parameterTypeClass, LanguageDriver langDriver) {
     List<XNode> selectKeyNodes = context.evalNodes("selectKey");
+    // 从这里可以知道，<insert>中可以包含零或多个<selectKey>，但需要使用databaseId来做区分
     if (configuration.getDatabaseId() != null) {
       parseSelectKeyNodes(id, selectKeyNodes, parameterTypeClass, langDriver, configuration.getDatabaseId());
     }

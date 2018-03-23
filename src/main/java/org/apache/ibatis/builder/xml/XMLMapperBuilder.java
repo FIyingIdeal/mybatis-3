@@ -442,6 +442,9 @@ public class XMLMapperBuilder extends BaseBuilder {
     return builderAssistant.buildDiscriminator(resultType, column, javaTypeClass, jdbcTypeEnum, typeHandlerClass, discriminatorMap);
   }
 
+  /**
+   * 解析<sql>标签
+   */
   private void sqlElement(List<XNode> list) throws Exception {
     if (configuration.getDatabaseId() != null) {
       sqlElement(list, configuration.getDatabaseId());
@@ -464,10 +467,14 @@ public class XMLMapperBuilder extends BaseBuilder {
    */
   private void sqlElement(List<XNode> list, String requiredDatabaseId) throws Exception {
     for (XNode context : list) {
+      // 获取databaseId属性的值
       String databaseId = context.getStringAttribute("databaseId");
       String id = context.getStringAttribute("id");
       id = builderAssistant.applyCurrentNamespace(id, false);
+      // 判断当前使用数据库对应的databaseId与配置中的databaseId是否一致
       if (databaseIdMatchesCurrent(id, databaseId, requiredDatabaseId)) {
+        // 如果databaseId一致，将其保存到了sqlFragments当中了，在解析<select><insert><update>或<delete>时会用到
+        // 这里的sqlFragments是在构建XMLMapperBuilder的时候传过来的，其实就是调用了configuration.getSqlFragments()，这里相当于保存到了configuration中
         sqlFragments.put(id, context);
       }
     }
@@ -504,7 +511,9 @@ public class XMLMapperBuilder extends BaseBuilder {
   private ResultMapping buildResultMappingFromContext(XNode context, Class<?> resultType, List<ResultFlag> flags) throws Exception {
     String property;
     if (flags.contains(ResultFlag.CONSTRUCTOR)) {
-      // 从mybatis3.4.3开始<constructor>的子节点<iaArg>和<arg>中支持name属性，这样的话可以在指定参数名称的前提下，以任意顺序编写 arg 元素（之前必须按顺序）
+      // 从mybatis3.4.3开始<constructor>的子节点<iaArg>和<arg>中支持name属性
+      // 这样的话可以在指定参数名称的前提下，以任意顺序编写 arg 元素（之前必须按顺序）
+      // 但如果想要通过name来匹配响应的构造方法，必须在对应的构造方法中的每一个参数前添加Mybatis的@Param("{name属性的值}")，否则会报异常
       property = context.getStringAttribute("name");
     } else {
       property = context.getStringAttribute("property");
@@ -529,7 +538,7 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
   /**
-   * 这个方法主要用来解析<resultMap>的嵌套子标签，从该方法的两次调用中可知，该方法的调用时机是当子标签中对应的resultMap属性不存在的时候
+   * 这个方法主要用来解析<resultMap>的嵌套子标签中有对其他<resultMap>或自定义类的引用
    * 通过调用{@link XMLMapperBuilder#resultMapElement(XNode, List)}方法解析其对应的标签，最重要的是对type相关属性的解析
    * 如 <collection>  ->  ofType/javaType
    *    <association> ->  javaType
@@ -543,9 +552,10 @@ public class XMLMapperBuilder extends BaseBuilder {
     if ("association".equals(context.getName())
         || "collection".equals(context.getName())
         || "case".equals(context.getName())) {
-      // <collection>中可以有select标签，如果使用select引用了其他的查询，那么其结果映射将由这个被引用的select来处理，而这里就不用解析处理了
+      // <collection>中可以有select标签，如果使用select引用了其他的查询，那么其结果映射将由这个被引用的select中对应的resultMap来处理，而这里就不用解析处理了
       if (context.getStringAttribute("select") == null) {
         // 解析<association>、<collection>或<case>标签中type相关的属性（resultMap、resultType、ofType、javaType）
+        // 这里其实是resultMapElement(XNode,List)的递归调用
         ResultMap resultMap = resultMapElement(context, resultMappings);
         return resultMap.getId();
       }

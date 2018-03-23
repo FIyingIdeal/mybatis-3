@@ -28,6 +28,9 @@ import org.apache.ibatis.session.Configuration;
 
 /**
  * @author Clinton Begin
+ * @commentauthro yanchao
+ * @datetime 2018-3-23 15:18:07
+ * @function 拼接sql时候的环境（context），appendSql(String)方法会进行拼接sql操作
  */
 public class DynamicContext {
 
@@ -49,6 +52,7 @@ public class DynamicContext {
     } else {
       bindings = new ContextMap(null);
     }
+    // TODO parameter_object_key设置为了_parameter（这个应该是和当只有一个String参数时使用#{_parameter}来获取参数值相关）
     bindings.put(PARAMETER_OBJECT_KEY, parameterObject);
     bindings.put(DATABASE_ID_KEY, configuration.getDatabaseId());
   }
@@ -61,6 +65,10 @@ public class DynamicContext {
     bindings.put(name, value);
   }
 
+  /**
+   * sql拼接
+   * @param sql
+   */
   public void appendSql(String sql) {
     sqlBuilder.append(sql);
     sqlBuilder.append(" ");

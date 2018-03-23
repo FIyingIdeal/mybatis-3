@@ -52,6 +52,8 @@ import org.apache.ibatis.type.TypeHandler;
 
 /**
  * @author Clinton Begin
+ * @commentauthor yanchao
+ * @datetime 2018-3-22 11:58:34
  */
 public class MapperBuilderAssistant extends BaseBuilder {
 
@@ -230,6 +232,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
     ResultMap resultMap = new ResultMap.Builder(configuration, id, type, resultMappings, autoMapping)
         .discriminator(discriminator)
         .build();
+    // 构造完ResultMap以后将其添加到configuration当中
     configuration.addResultMap(resultMap);
     return resultMap;
   }

@@ -31,6 +31,9 @@ import org.apache.ibatis.session.Configuration;
  * 
  * @since 3.2.0
  * @author Eduardo Macarron
+ *
+ * @commentauthor yanchao
+ * @datatime 2018-3-23 17:42:18
  */
 public class RawSqlSource implements SqlSource {
 
@@ -47,8 +50,11 @@ public class RawSqlSource implements SqlSource {
   }
 
   private static String getSql(Configuration configuration, SqlNode rootSqlNode) {
+    // 构造拼接sql时的环境（context）对象
     DynamicContext context = new DynamicContext(configuration, null);
+    // 处理sql片段
     rootSqlNode.apply(context);
+    // 获取拼接好的sql
     return context.getSql();
   }
 

@@ -89,7 +89,9 @@ public class GenericTokenParser {
           offset = src.length;
         } else {
           // 使用handler（TokenHandler实现类的实例）对expression（占位符描述表达式，如 username,javaType=xxx,jdbcType=xxx）进行解析，不同的handler的handleToken处理逻辑不同
+          // PropertyParser.VariableTokenHandler#handleToken(String) 的处理逻辑是判断传过去的参数值在properties文件中是否存在key值与其相同的，存在则返回对应的值，否则返回${参数值}
           // ParameterMappingTokenHandler#handleToken(String) 的处理逻辑是解析sql中的参数（#{param,javaType=xxx}）,并返回?来替换掉该参数（PreparedStatement就是使用?来做占位符的）
+          // TextSqlNode.DynamicCheckerTokenParser#handleToken(String)
           builder.append(handler.handleToken(expression.toString()));
           offset = end + closeToken.length();
         }

@@ -35,6 +35,9 @@ import org.apache.ibatis.session.Configuration;
 
 /**
  * @author Clinton Begin
+ * @commentauthor yanchao
+ * @datetime 2018-3-22 11:32:43
+ * @function <resultMap>对应类
  */
 public class ResultMap {
   private Configuration configuration;
@@ -96,6 +99,7 @@ public class ResultMap {
         resultMap.hasNestedResultMaps = resultMap.hasNestedResultMaps || (resultMapping.getNestedResultMapId() != null && resultMapping.getResultSet() == null);
         final String column = resultMapping.getColumn();
         if (column != null) {
+          // 将column转换成了大写后添加到一个Set中
           resultMap.mappedColumns.add(column.toUpperCase(Locale.ENGLISH));
         } else if (resultMapping.isCompositeResult()) {
           for (ResultMapping compositeResultMapping : resultMapping.getComposites()) {
@@ -106,11 +110,15 @@ public class ResultMap {
           }
         }
         final String property = resultMapping.getProperty();
+        // property属性值没有像column一样转换成大写，而是直接将原始值添加到了Set中
         if(property != null) {
           resultMap.mappedProperties.add(property);
         }
+        // 对<constructor>子节点的处理
         if (resultMapping.getFlags().contains(ResultFlag.CONSTRUCTOR)) {
           resultMap.constructorResultMappings.add(resultMapping);
+          // 这里判断子节点中是否存在name属性（将标签name属性的值赋值给了ResultMapping的property属性
+          // 可以参考XMLMapperBuilder#buildResultMappingFromContext(XNode, Class, List)方法）
           if (resultMapping.getProperty() != null) {
             constructorArgNames.add(resultMapping.getProperty());
           }
@@ -125,6 +133,8 @@ public class ResultMap {
         resultMap.idResultMappings.addAll(resultMap.resultMappings);
       }
       if (!constructorArgNames.isEmpty()) {
+        // 这里会通过<constructor>中子节点的name属性来匹配相应类的构造方法，但构造方法中参数必须使用@Param("{name属性的值}")来指定匹配哪个名字
+        // 或者在<constructor>子节点的name直接以arg0，arg1...这样命名（后边的数字是参数在构造方法中的index），不过不推荐这样使用...
         final List<String> actualArgNames = argNamesOfMatchingConstructor(constructorArgNames);
         if (actualArgNames == null) {
           throw new BuilderException("Failed to find a constructor in '"
@@ -149,6 +159,11 @@ public class ResultMap {
       return resultMap;
     }
 
+    /**
+     * 获取构造方法上的参数名并与<constructor>子节点的name属性进行匹配
+     * @param constructorArgNames
+     * @return
+     */
     private List<String> argNamesOfMatchingConstructor(List<String> constructorArgNames) {
       Constructor<?>[] constructors = resultMap.type.getDeclaredConstructors();
       for (Constructor<?> constructor : constructors) {
@@ -184,9 +199,11 @@ public class ResultMap {
 
     private List<String> getArgNames(Constructor<?> constructor) {
       if (resultMap.configuration.isUseActualParamName() && Jdk.parameterExists) {
+        // 这里使用Java8提供的Executable和Parameter来获取参数名，但编译以后获取到的参数名都是arg0,arg1这样的
         return ParamNameUtil.getParamNames(constructor);
       } else {
         List<String> paramNames = new ArrayList<String>();
+        // 获取构造方法参数上的注解，主要是为了获取@Param注解
         final Annotation[][] paramAnnotations = constructor.getParameterAnnotations();
         int paramCount = paramAnnotations.length;
         for (int paramIndex = 0; paramIndex < paramCount; paramIndex++) {
