@@ -51,8 +51,12 @@ public class TrimSqlNode implements SqlNode {
 
   @Override
   public boolean apply(DynamicContext context) {
+    // FilteredDynamicContext是DynamicContext的子类，动态标签嵌套时会使用到
     FilteredDynamicContext filteredDynamicContext = new FilteredDynamicContext(context);
+    // 动态标签的拼接过程，借助参数来拼接sql，不满足条件的标签不会被拼接
+    // 这里拼接实际是一直在调用FilteredDynamicContext#appendSql(String)
     boolean result = contents.apply(filteredDynamicContext);
+    //
     filteredDynamicContext.applyAll();
     return result;
   }
@@ -85,6 +89,7 @@ public class TrimSqlNode implements SqlNode {
 
     public void applyAll() {
       sqlBuffer = new StringBuilder(sqlBuffer.toString().trim());
+      // 转换为大写是为了将使用者自己写SQL是条件中添加的 AND或OR 剔除掉时方便匹配
       String trimmedUppercaseSql = sqlBuffer.toString().toUpperCase(Locale.ENGLISH);
       if (trimmedUppercaseSql.length() > 0) {
         applyPrefix(sqlBuffer, trimmedUppercaseSql);
@@ -122,6 +127,7 @@ public class TrimSqlNode implements SqlNode {
       if (!prefixApplied) {
         prefixApplied = true;
         if (prefixesToOverride != null) {
+          // 去除使用者自己添加的 AND 或 OR
           for (String toRemove : prefixesToOverride) {
             if (trimmedUppercaseSql.startsWith(toRemove)) {
               sql.delete(0, toRemove.trim().length());
@@ -129,6 +135,7 @@ public class TrimSqlNode implements SqlNode {
             }
           }
         }
+        // 如果前缀不为空的话就将前缀拼接上
         if (prefix != null) {
           sql.insert(0, " ");
           sql.insert(0, prefix);

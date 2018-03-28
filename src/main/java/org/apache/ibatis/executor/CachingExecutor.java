@@ -92,6 +92,7 @@ public class CachingExecutor implements Executor {
   @Override
   public <E> List<E> query(MappedStatement ms, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, CacheKey key, BoundSql boundSql)
       throws SQLException {
+    // mapper文件中<cache>或<cache-ref>中对应的Cache对象
     Cache cache = ms.getCache();
     if (cache != null) {
       flushCacheIfRequired(ms);
@@ -161,6 +162,7 @@ public class CachingExecutor implements Executor {
     delegate.clearLocalCache();
   }
 
+  // 判断是否需要清空缓存，其中isFlushCacheRequired()返回值是由当前sql是否是select决定的，如果是select返回false，即不清空缓存，否则清空缓存
   private void flushCacheIfRequired(MappedStatement ms) {
     Cache cache = ms.getCache();
     if (cache != null && ms.isFlushCacheRequired()) {      

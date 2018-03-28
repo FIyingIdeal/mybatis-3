@@ -137,6 +137,10 @@ public class ResultSetWrapper {
     return null;
   }
 
+  /**
+   * 获取已被映射的和未被映射的columnName
+   * 其中已被映射的是在处理<resultMap>中的<constructor>或<property>时就被赋值了，剩下未被映射的是mybatis默认启用的automapping来处理
+   */
   private void loadMappedAndUnmappedColumnNames(ResultMap resultMap, String columnPrefix) throws SQLException {
     List<String> mappedColumnNames = new ArrayList<String>();
     List<String> unmappedColumnNames = new ArrayList<String>();

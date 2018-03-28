@@ -309,6 +309,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
         .lang(lang)
         .resultOrdered(resultOrdered)
         .resultSets(resultSets)
+        // resultMap与resultType在一个sql配置中应该只能出现一个，所以这里会进行处理
         .resultMaps(getStatementResultMaps(resultMap, resultType, id))
         .resultSetType(resultSetType)
         .flushCacheRequired(valueOrDefault(flushCache, !isSelect))
@@ -354,6 +355,13 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return parameterMap;
   }
 
+  /**
+   * 处理sql配置中的resultMap或resultType。这里会将resultType指定的类转化为一个ResultMap
+   * @param resultMap
+   * @param resultType
+   * @param statementId
+   * @return
+   */
   private List<ResultMap> getStatementResultMaps(
       String resultMap,
       Class<?> resultType,

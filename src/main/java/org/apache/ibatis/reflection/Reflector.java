@@ -77,6 +77,7 @@ public class Reflector {
     }
   }
 
+  // 查找默认构造方法，即无参构造方法
   private void addDefaultConstructor(Class<?> clazz) {
     Constructor<?>[] consts = clazz.getDeclaredConstructors();
     for (Constructor<?> constructor : consts) {
@@ -95,16 +96,21 @@ public class Reflector {
     }
   }
 
+  // 获取类的所有getter方法
   private void addGetMethods(Class<?> cls) {
     Map<String, List<Method>> conflictingGetters = new HashMap<String, List<Method>>();
+    // 获取类的所有方法
     Method[] methods = getClassMethods(cls);
     for (Method method : methods) {
+      // getter方法中肯定没有参数，如果有的话直接跳过。这里可以直接使用method.getParameterCount()
       if (method.getParameterTypes().length > 0) {
         continue;
       }
       String name = method.getName();
+      // 方法名满足要求，而不是直接get()或is()方法
       if ((name.startsWith("get") && name.length() > 3)
           || (name.startsWith("is") && name.length() > 2)) {
+        // 获取getter方法对应的实例变量的名称，如方法名为getName，则方法获取到的个name
         name = PropertyNamer.methodToProperty(name);
         addMethodConflict(conflictingGetters, name, method);
       }
@@ -313,6 +319,7 @@ public class Reflector {
    *
    * @param cls The class
    * @return An array containing all methods in this class
+   * 获取一个类及其父类/接口中的所有非桥接方法（桥接方法在编译阶段产生）
    */
   private Method[] getClassMethods(Class<?> cls) {
     Map<String, Method> uniqueMethods = new HashMap<String, Method>();
@@ -358,6 +365,8 @@ public class Reflector {
     }
   }
 
+  // 获取方法的特征签名形式为： 返回值类型#方法名:参数1类型,参数2类型...
+  // 以这个方法为例： java.lang.String#getSignature:java.lang.reflect.Method
   private String getSignature(Method method) {
     StringBuilder sb = new StringBuilder();
     Class<?> returnType = method.getReturnType();

@@ -73,7 +73,9 @@ public class PreparedStatementHandler extends BaseStatementHandler {
 
   @Override
   protected Statement instantiateStatement(Connection connection) throws SQLException {
+    // 获取sql
     String sql = boundSql.getSql();
+    // 如果有主键生成的配置，即keyGenerator不为空，其实Jdbc3KeyGenerator类型的，则Statement返回的是生成主键sql对应的Statement
     if (mappedStatement.getKeyGenerator() instanceof Jdbc3KeyGenerator) {
       String[] keyColumnNames = mappedStatement.getKeyColumns();
       if (keyColumnNames == null) {

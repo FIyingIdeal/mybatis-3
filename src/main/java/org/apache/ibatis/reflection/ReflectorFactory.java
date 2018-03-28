@@ -15,6 +15,9 @@
  */
 package org.apache.ibatis.reflection;
 
+/**
+ * 这个类最主要的就是获取一个类对应的Reflector对象。Reflector工厂类
+ */
 public interface ReflectorFactory {
 
   boolean isClassCacheEnabled();

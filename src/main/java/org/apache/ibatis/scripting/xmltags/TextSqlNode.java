@@ -24,6 +24,9 @@ import org.apache.ibatis.type.SimpleTypeRegistry;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-3-26 16:26:25
  */
 public class TextSqlNode implements SqlNode {
   private String text;
@@ -47,6 +50,8 @@ public class TextSqlNode implements SqlNode {
 
   @Override
   public boolean apply(DynamicContext context) {
+    // TextSqlNode的apply()方法中会调用BindingTokenParser#handleToken(String)方法将${}中的动态参数值获取到
+    // 然后将整个${}用参数值“替换”掉（在GenericTokenParse#parse(String)中进行处理的）
     GenericTokenParser parser = createParser(new BindingTokenParser(context, injectionFilter));
     context.appendSql(parser.parse(text));
     return true;
@@ -68,6 +73,7 @@ public class TextSqlNode implements SqlNode {
 
     @Override
     public String handleToken(String content) {
+      // 获取key值为_parameter的value值，这里的_parameter使用DynamicContext.PARAMETER_OBJECT_KEY替代更好吧
       Object parameter = context.getBindings().get("_parameter");
       if (parameter == null) {
         context.getBindings().put("value", null);
@@ -75,6 +81,7 @@ public class TextSqlNode implements SqlNode {
         context.getBindings().put("value", parameter);
       }
       Object value = OgnlCache.getValue(content, context.getBindings());
+      // 判断值是否是null，如果不是null的话就转换成String，否则返回""，所以在<if>中判断空的时候使用''就行，不用null
       String srtValue = (value == null ? "" : String.valueOf(value)); // issue #274 return "" instead of "null"
       checkInjection(srtValue);
       return srtValue;

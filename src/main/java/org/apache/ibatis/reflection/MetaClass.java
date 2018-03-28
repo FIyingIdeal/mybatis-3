@@ -28,6 +28,10 @@ import org.apache.ibatis.reflection.property.PropertyTokenizer;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-3-28 17:17:21
+ * @function 一个类的元数据信息相关类，主要依赖于Reflector来判断类中是否包含有相关的信息
  */
 public class MetaClass {
 

@@ -25,14 +25,20 @@ import org.apache.ibatis.builder.BuilderException;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-3-26 16:17:12
  */
 public class ExpressionEvaluator {
 
   public boolean evaluateBoolean(String expression, Object parameterObject) {
+    // 获取表达式的结果
     Object value = OgnlCache.getValue(expression, parameterObject);
+    // 表达式结果是Boolean类型的话，转换一下类型直接返回
     if (value instanceof Boolean) {
       return (Boolean) value;
     }
+    // 表达式结果是Number类型的话，则如果是0，则返回false，否则返回ture
     if (value instanceof Number) {
         return !new BigDecimal(String.valueOf(value)).equals(BigDecimal.ZERO);
     }

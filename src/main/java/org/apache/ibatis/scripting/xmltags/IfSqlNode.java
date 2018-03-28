@@ -17,6 +17,8 @@ package org.apache.ibatis.scripting.xmltags;
 
 /**
  * @author Clinton Begin
+ * @commentauthor yanchao
+ * @datetime 2018-3-26 16:12:03
  */
 public class IfSqlNode implements SqlNode {
   private ExpressionEvaluator evaluator;
@@ -31,6 +33,7 @@ public class IfSqlNode implements SqlNode {
 
   @Override
   public boolean apply(DynamicContext context) {
+    // 判断<if>中的test属性对应的表达式的“真假”
     if (evaluator.evaluateBoolean(test, context.getBindings())) {
       contents.apply(context);
       return true;

@@ -65,6 +65,9 @@ import org.apache.ibatis.type.TypeHandlerRegistry;
  * @author Eduardo Macarron
  * @author Iwao AVE!
  * @author Kazuki Shimizu
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-3-28 15:59:57
  */
 public class DefaultResultSetHandler implements ResultSetHandler {
 
@@ -380,6 +383,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
 
   private Object getRowValue(ResultSetWrapper rsw, ResultMap resultMap) throws SQLException {
     final ResultLoaderMap lazyLoader = new ResultLoaderMap();
+    // 获取resultMap对应的实例
     Object rowValue = createResultObject(rsw, resultMap, lazyLoader, null);
     if (rowValue != null && !hasTypeHandlerForResultObject(rsw, resultMap.getType())) {
       final MetaObject metaObject = configuration.newMetaObject(rowValue);
@@ -573,7 +577,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
   //
   // INSTANTIATION & CONSTRUCTOR MAPPING
   //
-
+  // 创建一个resultType或resultMap对应的类的实例（通过构造方法创建的话会为该实例赋构造方法中相关参数的值）  ...好乱...
   private Object createResultObject(ResultSetWrapper rsw, ResultMap resultMap, ResultLoaderMap lazyLoader, String columnPrefix) throws SQLException {
     this.useConstructorMappings = false; // reset previous mapping result
     final List<Class<?>> constructorArgTypes = new ArrayList<Class<?>>();
@@ -593,10 +597,14 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     return resultObject;
   }
 
+  // 创建一个resultType或resultMap对应的类的实例，如果使用的是constructor创建的话，会把constructor相关参数值从ResultSet中解析出来放到constructorArgs中
   private Object createResultObject(ResultSetWrapper rsw, ResultMap resultMap, List<Class<?>> constructorArgTypes, List<Object> constructorArgs, String columnPrefix)
       throws SQLException {
+    // 获取<resultMap type>中的type属性值所对应的Class对象或sql标签配置中对应的resultType值对应的Class对象
     final Class<?> resultType = resultMap.getType();
+    // 获取resultType对应的MetaClass对象（可以用来判断该类中是否包含有某些信息）
     final MetaClass metaType = MetaClass.forClass(resultType, reflectorFactory);
+    // 获取<constructor>中各子标签对应的ResultMapping对象
     final List<ResultMapping> constructorMappings = resultMap.getConstructorResultMappings();
     if (hasTypeHandlerForResultObject(rsw, resultType)) {
       return createPrimitiveResultObject(rsw, resultMap, columnPrefix);
@@ -778,11 +786,16 @@ public class DefaultResultSetHandler implements ResultSetHandler {
   // DISCRIMINATOR
   //
 
+  /*
+   * 获取<discriminator>标签中column属性对应字段的值与匹配的那个<case>所引用的ResultMap对象
+   */
   public ResultMap resolveDiscriminatedResultMap(ResultSet rs, ResultMap resultMap, String columnPrefix) throws SQLException {
     Set<String> pastDiscriminators = new HashSet<String>();
     Discriminator discriminator = resultMap.getDiscriminator();
     while (discriminator != null) {
+      // 获取column属性指定字段在查询结果集中当前遍历到的记录的值，其值理论上会与某一个<case>中的value属性值相同
       final Object value = getDiscriminatorValue(rs, discriminator, columnPrefix);
+      // 获取<case value="" resultMap="">中resultMap属性对应的值
       final String discriminatedMapId = discriminator.getMapIdFor(String.valueOf(value));
       if (configuration.hasResultMap(discriminatedMapId)) {
         resultMap = configuration.getResultMap(discriminatedMapId);
@@ -798,6 +811,9 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     return resultMap;
   }
 
+  /*
+   * 获取<discriminator>标签中column属性指定字段在查询结果集中当前记录的值
+   */
   private Object getDiscriminatorValue(ResultSet rs, Discriminator discriminator, String columnPrefix) throws SQLException {
     final ResultMapping resultMapping = discriminator.getResultMapping();
     final TypeHandler<?> typeHandler = resultMapping.getTypeHandler();
