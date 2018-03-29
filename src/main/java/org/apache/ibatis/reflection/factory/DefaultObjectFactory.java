@@ -32,19 +32,36 @@ import org.apache.ibatis.reflection.ReflectionException;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-3-29 11:09:42
+ * @function 为指定类型创建一个实例
  */
 public class DefaultObjectFactory implements ObjectFactory, Serializable {
 
   private static final long serialVersionUID = -8855120656740914948L;
 
+  /**
+   * 创建指定类型实例的方法，调用了其重载的方法
+   * 调用这个方法来创建实例的话其实是使用默认的无参构造方法来创建（即使无参构造方法是private的也可以）
+   * 但有一点需要注意的是，如果type对应的类只提供了有参构造方法，而没有无参构造方法的话
+   * 编译器是不会自动生成无参构造方法的，此时使用这个方法来创建实例的话会抛出异常
+   */
   @Override
   public <T> T create(Class<T> type) {
     return create(type, null, null);
   }
 
+  /**
+   * 创建指定类型实例的方法，其使用的是构造方法来创建实例
+   * @param type Object type  实例类型
+   * @param constructorArgTypes Constructor argument types  构造方法的参数类型
+   * @param constructorArgs Constructor argument values     构造方法的参数值
+   */
   @SuppressWarnings("unchecked")
   @Override
   public <T> T create(Class<T> type, List<Class<?>> constructorArgTypes, List<Object> constructorArgs) {
+    // 处理interface类型，对部分interface类型指定了一个默认的实现类
     Class<?> classToCreate = resolveInterface(type);
     // we know types are assignable
     return (T) instantiateClass(classToCreate, constructorArgTypes, constructorArgs);
@@ -55,9 +72,16 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
     // no props for default
   }
 
+  /**
+   * 使用构造方法实例化一个对象，具体是使用哪个构造方法，是由参数类型和参数值来确定的
+   * @param type  实例类型
+   * @param constructorArgTypes  构造方法的参数类型
+   * @param constructorArgs      构造方法的参数值
+   */
   <T> T instantiateClass(Class<T> type, List<Class<?>> constructorArgTypes, List<Object> constructorArgs) {
     try {
       Constructor<T> constructor;
+      // 构造函数参数类型或参数值有一个为空的话就使用默认构造方法（无参构造方法）来实例化对象
       if (constructorArgTypes == null || constructorArgs == null) {
         constructor = type.getDeclaredConstructor();
         if (!constructor.isAccessible()) {
@@ -65,10 +89,12 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
         }
         return constructor.newInstance();
       }
+      // 获取指定参数类型的构造方法
       constructor = type.getDeclaredConstructor(constructorArgTypes.toArray(new Class[constructorArgTypes.size()]));
       if (!constructor.isAccessible()) {
         constructor.setAccessible(true);
       }
+      // 使用带参构造方法来实例化一个实例
       return constructor.newInstance(constructorArgs.toArray(new Object[constructorArgs.size()]));
     } catch (Exception e) {
       StringBuilder argTypes = new StringBuilder();
@@ -91,6 +117,10 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
     }
   }
 
+  /**
+   * 处理type为接口的情况，这里只是对部分接口进行了处理，处理方法也很简单，为其指定了一个该接口的默认实现类
+   * 如果是用户自定义的接口需要处理的话，可以继承这个类并重写这各方法
+   */
   protected Class<?> resolveInterface(Class<?> type) {
     Class<?> classToCreate;
     if (type == List.class || type == Collection.class || type == Iterable.class) {
@@ -107,6 +137,9 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
     return classToCreate;
   }
 
+  /**
+   * 判断指定的类是否是Collection类型
+   */
   @Override
   public <T> boolean isCollection(Class<T> type) {
     return Collection.class.isAssignableFrom(type);

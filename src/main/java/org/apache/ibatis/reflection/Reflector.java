@@ -44,7 +44,9 @@ import org.apache.ibatis.reflection.property.PropertyNamer;
  *
  * @author Clinton Begin
  *
- * 这个类是用于描述一个指定类的相关信息的，如类的构造方法，类的getter/setter方法，相关的field等
+ * @commentauthor yanchao
+ * @datetime 2018-3-28 17:48:36
+ * @function 这个类是用于描述一个指定类的相关信息的，如类的构造方法，类的getter/setter方法，相关的field等
  */
 public class Reflector {
 

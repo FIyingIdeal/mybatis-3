@@ -138,14 +138,17 @@ public class ResultSetWrapper {
   }
 
   /**
-   * 获取已被映射的和未被映射的columnName
-   * 其中已被映射的是在处理<resultMap>中的<constructor>或<property>时就被赋值了，剩下未被映射的是mybatis默认启用的automapping来处理
+   * 获取主动映射的和被动（自动）映射的columnName
+   * 其中主动映射的是<resultMap>中的<constructor>或<property>中配置的，被动映射的就是需要自动映射的
+   * 被动映射的字段是查询结果集ResultSet中所有字段去除主动映射的字段
    */
   private void loadMappedAndUnmappedColumnNames(ResultMap resultMap, String columnPrefix) throws SQLException {
     List<String> mappedColumnNames = new ArrayList<String>();
     List<String> unmappedColumnNames = new ArrayList<String>();
     final String upperColumnPrefix = columnPrefix == null ? null : columnPrefix.toUpperCase(Locale.ENGLISH);
+    // 获取主动映射的字段集合（<resultMap>中配置的）
     final Set<String> mappedColumns = prependPrefixes(resultMap.getMappedColumns(), upperColumnPrefix);
+    // 遍历结果集中所有的字段名，将其分为主动映射和需要被动映射（需要自动映射的）两类
     for (String columnName : columnNames) {
       final String upperColumnName = columnName.toUpperCase(Locale.ENGLISH);
       if (mappedColumns.contains(upperColumnName)) {

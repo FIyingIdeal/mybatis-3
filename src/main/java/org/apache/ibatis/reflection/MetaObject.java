@@ -29,6 +29,11 @@ import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-3-29 17:43:36
+ * @function 这个类与{@link MetaClass}极其相似，其本身也用到了MetaClass部分功能来辅助实现本身的功能
+ *
  */
 public class MetaObject {
 

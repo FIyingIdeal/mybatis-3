@@ -45,9 +45,13 @@ public class ResultMap {
   private String id;
   private Class<?> type;
   private List<ResultMapping> resultMappings;
+  // 用来收集配置在<constructor>中的<id>子标签对应的ResultMapping对象
   private List<ResultMapping> idResultMappings;
+  // 用来收集配置在<constructor>中包含的子标签对应的ResultMapping对象
   private List<ResultMapping> constructorResultMappings;
+  // 用来收集配置在<resultMap>中通过<property>配置对应的ResultMapping对象
   private List<ResultMapping> propertyResultMappings;
+  // 用来收集配置在<resultMap>子标签中包含的所有的column属性指定的字段名
   private Set<String> mappedColumns;
   private Set<String> mappedProperties;
   private Discriminator discriminator;
@@ -99,7 +103,8 @@ public class ResultMap {
         resultMap.hasNestedResultMaps = resultMap.hasNestedResultMaps || (resultMapping.getNestedResultMapId() != null && resultMapping.getResultSet() == null);
         final String column = resultMapping.getColumn();
         if (column != null) {
-          // 将column转换成了大写后添加到一个Set中
+          // 将column转换成了大写后添加到mappedColumns这个Set中，这个字段中其实包含的是所有在<resultMap>中通过<id><idArg><property>配置的column属性值
+          // 这个会在处理结果集进行自动映射的时候会用到 {@see ResultSetWrapper#loadMappedAndUnmappedColumnNames(ResultMap, String)}
           resultMap.mappedColumns.add(column.toUpperCase(Locale.ENGLISH));
         } else if (resultMapping.isCompositeResult()) {
           for (ResultMapping compositeResultMapping : resultMapping.getComposites()) {
@@ -114,7 +119,7 @@ public class ResultMap {
         if(property != null) {
           resultMap.mappedProperties.add(property);
         }
-        // 对<constructor>子节点的处理
+        // 对<constructor>子节点的处理，通过flag将<constructor>中相关的字段添加到constructorResultMappings变量中
         if (resultMapping.getFlags().contains(ResultFlag.CONSTRUCTOR)) {
           resultMap.constructorResultMappings.add(resultMapping);
           // 这里判断子节点中是否存在name属性（将标签name属性的值赋值给了ResultMapping的property属性
@@ -123,6 +128,8 @@ public class ResultMap {
             constructorArgNames.add(resultMapping.getProperty());
           }
         } else {
+          // 在<resultMap>中通过<property>配置对应的RequestMapping对象都被添加到了propertyResultMappings这个变量中了
+          // 不包含有ResultFlag.CONSTRUCTOR这个flag对应的RequestMapping对象
           resultMap.propertyResultMappings.add(resultMapping);
         }
         if (resultMapping.getFlags().contains(ResultFlag.ID)) {

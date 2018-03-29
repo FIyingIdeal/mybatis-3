@@ -22,6 +22,12 @@ import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-3-29 17:38:38
+ * @function 这个类是对MetaObject的一个补充，其只提供了一个静态方法forObject(Object)用来获取MetaObject对象
+ *           其本身还是调用了{@link MetaObject#forObject(Object, ObjectFactory, ObjectWrapperFactory, ReflectorFactory)}
+ *           只不过是为后边的各种Factory提供了一个默认值
  */
 public final class SystemMetaObject {
 

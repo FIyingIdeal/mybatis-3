@@ -31,7 +31,8 @@ import org.apache.ibatis.reflection.property.PropertyTokenizer;
  *
  * @commentauthor yanchao
  * @datetime 2018-3-28 17:17:21
- * @function 一个类的元数据信息相关类，主要依赖于Reflector来判断类中是否包含有相关的信息
+ * @function 一个类的元数据信息相关操作类，主要依赖于Reflector来判断类中是否包含有相关的信息
+ *           Mybatis还提供了 {@link MetaObject} 来表述一个对象的相关信息操作的类
  */
 public class MetaClass {
 
