@@ -59,6 +59,7 @@ public class Jdbc3KeyGenerator implements KeyGenerator {
   public void processBatch(MappedStatement ms, Statement stmt, Collection<Object> parameters) {
     ResultSet rs = null;
     try {
+      // 获取主键对应的ResultSet
       rs = stmt.getGeneratedKeys();
       final Configuration configuration = ms.getConfiguration();
       final TypeHandlerRegistry typeHandlerRegistry = configuration.getTypeHandlerRegistry();
@@ -66,6 +67,7 @@ public class Jdbc3KeyGenerator implements KeyGenerator {
       final ResultSetMetaData rsmd = rs.getMetaData();
       TypeHandler<?>[] typeHandlers = null;
       if (keyProperties != null && rsmd.getColumnCount() >= keyProperties.length) {
+        // 遍历参数集合，设置主键值
         for (Object parameter : parameters) {
           // there should be one row for each statement (also one for each parameter)
           if (!rs.next()) {

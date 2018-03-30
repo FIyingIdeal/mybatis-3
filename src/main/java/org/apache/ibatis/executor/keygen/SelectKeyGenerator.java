@@ -29,6 +29,10 @@ import org.apache.ibatis.session.RowBounds;
 /**
  * @author Clinton Begin
  * @author Jeff Butler
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-3-30 14:58:22
+ * @function 生成通过<selectKey>方式生成主键的主键值，并插入到对相应对象字段中
  */
 public class SelectKeyGenerator implements KeyGenerator {
   
@@ -55,6 +59,12 @@ public class SelectKeyGenerator implements KeyGenerator {
     }
   }
 
+  /**
+   * 生成主键值（<selectKey>中sql语句返回的值），并赋值给插入数据的对应Field中
+   * @param executor
+   * @param ms
+   * @param parameter 插入的数据对应的对象
+   */
   private void processGeneratedKeys(Executor executor, MappedStatement ms, Object parameter) {
     try {
       if (parameter != null && keyStatement != null && keyStatement.getKeyProperties() != null) {
@@ -64,7 +74,9 @@ public class SelectKeyGenerator implements KeyGenerator {
         if (keyProperties != null) {
           // Do not close keyExecutor.
           // The transaction will be closed by parent executor.
+          // 生成一个新的Executor，
           Executor keyExecutor = configuration.newExecutor(executor.getTransaction(), ExecutorType.SIMPLE);
+          // 执行<selectKey>中的sql语句，获取主键值
           List<Object> values = keyExecutor.query(keyStatement, parameter, RowBounds.DEFAULT, Executor.NO_RESULT_HANDLER);
           if (values.size() == 0) {
             throw new ExecutorException("SelectKey returned no data.");            
@@ -72,7 +84,9 @@ public class SelectKeyGenerator implements KeyGenerator {
             throw new ExecutorException("SelectKey returned more than one value.");
           } else {
             MetaObject metaResult = configuration.newMetaObject(values.get(0));
+            // <selectKey>中keyProperty属性只指定了一个属性（多属性的话使用逗号进行分隔的）
             if (keyProperties.length == 1) {
+              // 将主键值设置到插入数据对应的对象当中
               if (metaResult.hasGetter(keyProperties[0])) {
                 setValue(metaParam, keyProperties[0], metaResult.getValue(keyProperties[0]));
               } else {
@@ -81,6 +95,7 @@ public class SelectKeyGenerator implements KeyGenerator {
                 setValue(metaParam, keyProperties[0], values.get(0));
               }
             } else {
+              // 处理<selectKey>中keyProperty属性指定多个字段的情况
               handleMultipleProperties(keyProperties, metaParam, metaResult);
             }
           }
@@ -93,6 +108,12 @@ public class SelectKeyGenerator implements KeyGenerator {
     }
   }
 
+  /**
+   * 处理<selectKey>中keyProperty属性指定多个字段的情况，将查询出来的主键值设置到对象当中
+   * @param keyProperties
+   * @param metaParam
+   * @param metaResult
+   */
   private void handleMultipleProperties(String[] keyProperties,
       MetaObject metaParam, MetaObject metaResult) {
     String[] keyColumns = keyStatement.getKeyColumns();

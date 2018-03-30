@@ -40,7 +40,9 @@ public class RoutingStatementHandler implements StatementHandler {
   private final StatementHandler delegate;
 
   public RoutingStatementHandler(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
-
+    // 在new相关的StatementHandler的时候，会调用其父类BaseStatementHandler构造方法，在构造方法里会干几个比较重要的事情：
+    //    1. 如果insert操作且使用了<selectKey>进行主键生成，则执行这个主键生成的sql，并将主键值设置到对应的对象当中；
+    //    2. 构建ParameterHandler和ResultSetHandler对象
     switch (ms.getStatementType()) {
       case STATEMENT:
         delegate = new SimpleStatementHandler(executor, ms, parameter, rowBounds, resultHandler, boundSql);

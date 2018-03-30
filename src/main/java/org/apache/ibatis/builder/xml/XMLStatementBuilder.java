@@ -132,7 +132,7 @@ public class XMLStatementBuilder extends BaseBuilder {
           // 也可以通过配置文件<setting name="useGeneratedKeys" value="false"/>来设置是否自动生成主键，但这种方式的优先级要低于在标签中设置属性的优先级
           // 从&&后边的语句可知，生成主键主要是针对insert操作的，TODO 但dtd中描述的update可以有<selectKey>，这个有点不明白
           configuration.isUseGeneratedKeys() && SqlCommandType.INSERT.equals(sqlCommandType))
-          //使用userGeneratedKeys来自动生成主键的话，实际的KeyGenerator是Jdbc3KeyGenerator的实例，而如果是<selectKey>的话，是SelectKeyGenerator，否则的话是NoKeyGenerator
+          // 使用useGeneratedKeys来自动生成主键的话，实际的KeyGenerator是Jdbc3KeyGenerator的实例，而如果是<selectKey>的话，是SelectKeyGenerator，否则的话是NoKeyGenerator
           ? Jdbc3KeyGenerator.INSTANCE : NoKeyGenerator.INSTANCE;
     }
 
@@ -201,7 +201,7 @@ public class XMLStatementBuilder extends BaseBuilder {
     SqlSource sqlSource = langDriver.createSqlSource(configuration, nodeToHandle, parameterTypeClass);
     SqlCommandType sqlCommandType = SqlCommandType.SELECT;
 
-    // 构建MappedStatement对象，并添加到configuration中
+    // 构建<selectKey>对应的MappedStatement对象，并添加到configuration中
     builderAssistant.addMappedStatement(id, sqlSource, statementType, sqlCommandType,
         fetchSize, timeout, parameterMap, parameterTypeClass, resultMap, resultTypeClass,
         resultSetTypeEnum, flushCache, useCache, resultOrdered,
@@ -210,7 +210,8 @@ public class XMLStatementBuilder extends BaseBuilder {
     id = builderAssistant.applyCurrentNamespace(id, false);
 
     MappedStatement keyStatement = configuration.getMappedStatement(id, false);
-    // 将SelectKeyGenerator对象添加到configuration中（使用<selectKey>方式来生成主键的话，使用的是SelectKeyGenerator，使用useGeneratedKeys方式的话，使用的是Jdbc3KeyGenerator）
+    // 构造SelectKeyGenerator对象并将其添加到configuration中
+    // 使用<selectKey>方式来生成主键的话，使用的是SelectKeyGenerator，使用useGeneratedKeys方式的话，使用的是Jdbc3KeyGenerator
     configuration.addKeyGenerator(id, new SelectKeyGenerator(keyStatement, executeBefore));
   }
 

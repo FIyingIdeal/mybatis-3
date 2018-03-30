@@ -19,8 +19,8 @@ public class MetaObjectTest {
         // MetaObject metaObject = MetaObject.forObject(...)
         PrivateConstructorClass pcc = PrivateConstructorClass.forObject();
         MetaObject metaObject = SystemMetaObject.forObject(pcc);
-        System.out.println(metaObject.hasGetter("message"));  // true ?
-        System.out.println(metaObject.hasSetter("message"));  // true ?
+        System.out.println(metaObject.hasGetter("message"));  // true Reflector会为Field自动添加MethodInvoker类型的getter和setter方法
+        System.out.println(metaObject.hasSetter("message"));  // true
         System.out.println(metaObject.getValue("message"));   // null
         metaObject.setValue("message", "MetaObjectTest");
         System.out.println(metaObject.getValue("message"));   // MetaObjectTest
