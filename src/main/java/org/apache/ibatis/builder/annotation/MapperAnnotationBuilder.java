@@ -91,6 +91,10 @@ import org.apache.ibatis.type.UnknownTypeHandler;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-4-2 11:35:58
+ * @function 这个类与{@link XMLMapperBuilder}功能类似，用来解析Mybatis的注解式sql的
  */
 public class MapperAnnotationBuilder {
 

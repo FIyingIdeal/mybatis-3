@@ -93,6 +93,9 @@ public class Jdbc3KeyGenerator implements KeyGenerator {
     }
   }
 
+  /**
+   * 对参数进行处理，与{@link org.apache.ibatis.session.defaults.DefaultSqlSession#wrapCollection(Object)}有关联
+   */
   private Collection<Object> getParameters(Object parameter) {
     Collection<Object> parameters = null;
     if (parameter instanceof Collection) {
