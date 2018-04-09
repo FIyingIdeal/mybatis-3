@@ -154,6 +154,7 @@ public abstract class BaseExecutor implements Executor {
       // 从本地缓存中获取
       list = resultHandler == null ? (List<E>) localCache.getObject(key) : null;
       if (list != null) {
+        // 处理执行存储过程的缓存结果设置
         handleLocallyCachedOutputParameters(ms, key, parameter, boundSql);
       } else {
         // 如果未从缓存中找到的话，则查询数据库
@@ -304,16 +305,22 @@ public abstract class BaseExecutor implements Executor {
     StatementUtil.applyTransactionTimeout(statement, statement.getQueryTimeout(), transaction.getTimeout());
   }
 
+  // 如果缓存不为空且执行的是存储过程，则会从parameter中获取结果。因为在执行存储过程的时候不论Mode是IN还是out，都会被设置到请求参数中
+  // 查询的时候是获取mode为in的key对应的值作为查询参数，查询结果会被设置到mode为out的key对应的parameter的域中
   private void handleLocallyCachedOutputParameters(MappedStatement ms, CacheKey key, Object parameter, BoundSql boundSql) {
+    // 判断执行的是否是存储过程
     if (ms.getStatementType() == StatementType.CALLABLE) {
+      // 获取对应的缓存，该对象中既包含请求参数，又包含查询结果
       final Object cachedParameter = localOutputParameterCache.getObject(key);
       if (cachedParameter != null && parameter != null) {
         final MetaObject metaCachedParameter = configuration.newMetaObject(cachedParameter);
         final MetaObject metaParameter = configuration.newMetaObject(parameter);
         for (ParameterMapping parameterMapping : boundSql.getParameterMappings()) {
+          // 遍历每一个ParameterMapping，只取mode=out的，即输出参数/查询结果
           if (parameterMapping.getMode() != ParameterMode.IN) {
             final String parameterName = parameterMapping.getProperty();
             final Object cachedValue = metaCachedParameter.getValue(parameterName);
+            // 将缓存值设置与之对应的parameter中的key（MetaObject方便了对象的一些操作）
             metaParameter.setValue(parameterName, cachedValue);
           }
         }
@@ -336,6 +343,7 @@ public abstract class BaseExecutor implements Executor {
     }
     // 缓存执行结果，将占位符替换掉了
     localCache.putObject(key, list);
+    // 如果执行的是存储过程，会把参数对象缓存起来，因为参数对象中包含有查询结果
     if (ms.getStatementType() == StatementType.CALLABLE) {
       localOutputParameterCache.putObject(key, parameter);
     }

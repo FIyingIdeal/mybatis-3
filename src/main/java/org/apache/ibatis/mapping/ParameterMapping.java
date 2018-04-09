@@ -52,6 +52,7 @@ public class ParameterMapping {
       parameterMapping.configuration = configuration;
       parameterMapping.property = property;
       parameterMapping.typeHandler = typeHandler;
+      // 默认的ParameterMapping#mode都是IN
       parameterMapping.mode = ParameterMode.IN;
     }
 
@@ -116,7 +117,6 @@ public class ParameterMapping {
               + "Parameters of type java.sql.ResultSet require a resultmap.");
         }            
       } else {
-        // 这里没看懂，这个意思是<parameterMap>子标签<parameter>中必须要有typeHandler属性（或指定javaType和jdbcType）吗？？？那test中的配置文件中为什么没有...
         if (parameterMapping.typeHandler == null) { 
           throw new IllegalStateException("Type handler was null on parameter mapping for property '"
             + parameterMapping.property + "'. It was either not specified and/or could not be found for the javaType ("

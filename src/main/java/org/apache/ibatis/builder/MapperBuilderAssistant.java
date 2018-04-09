@@ -168,6 +168,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
     resultMap = applyCurrentNamespace(resultMap, true);
 
     // Class parameterType = parameterMapBuilder.type();
+    // 解析参数的javaType，会视情况而设置该值的默认值
     Class<?> javaTypeClass = resolveParameterJavaType(parameterType, property, javaType, jdbcType);
     TypeHandler<?> typeHandlerInstance = resolveTypeHandler(javaTypeClass, typeHandler);
 
@@ -369,7 +370,10 @@ public class MapperBuilderAssistant extends BaseBuilder {
     resultMap = applyCurrentNamespace(resultMap, true);
 
     List<ResultMap> resultMaps = new ArrayList<ResultMap>();
+    // 该if-else体现出了resultMap与resultType只能有一个
     if (resultMap != null) {
+      // 如果执行查询返回多个结果集（mysql存储过程支持返回多个结果集）的话，可以将resultMap中的多个值用,隔开配置。
+      // 参考：https://blog.csdn.net/sinat_25295611/article/details/75103358
       String[] resultMapNames = resultMap.split(",");
       for (String resultMapName : resultMapNames) {
         try {
@@ -469,17 +473,22 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return javaType;
   }
 
+  // 解析sql语句中的参数类型，如果指定了javaType，则直接返回，否则视情况而定
   private Class<?> resolveParameterJavaType(Class<?> resultType, String property, Class<?> javaType, JdbcType jdbcType) {
     if (javaType == null) {
+      // 如果javaType为空（没有配置），jdbcType为CURSOR，则javaType指定为java.sql.ResultSet.class
       if (JdbcType.CURSOR.equals(jdbcType)) {
         javaType = java.sql.ResultSet.class;
       } else if (Map.class.isAssignableFrom(resultType)) {
+        // 如果javaType为空，resultType=Map，则javaType指定为Object.class
         javaType = Object.class;
       } else {
+        // resultType如果指定为一个类，则判断这个类中有没有同名实例变量，有的话就取该变量对应的类型
         MetaClass metaResultType = MetaClass.forClass(resultType, configuration.getReflectorFactory());
         javaType = metaResultType.getGetterType(property);
       }
     }
+    // 否则默认指定javaType=Object
     if (javaType == null) {
       javaType = Object.class;
     }

@@ -137,9 +137,11 @@ public abstract class BaseBuilder {
       return null;
     }
     // javaType ignored for injected handlers see issue #746 for full detail
+    // 如果对应的TypeHandler在TypeHandlerRegistry中已注册的话，直接获取该TypeHandler的实例，因为在注册的时候已经new好了一个对应的实例
     TypeHandler<?> handler = typeHandlerRegistry.getMappingTypeHandler(typeHandlerType);
     if (handler == null) {
       // not in registry, create a new one
+      // 如果对应的TypeHandler没有注册到TypeHandlerRegistry中的话，就构造一个该TypeHandler对应的实例并返回
       handler = typeHandlerRegistry.getInstance(javaType, typeHandlerType);
     }
     return handler;

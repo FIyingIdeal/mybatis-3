@@ -62,7 +62,10 @@ public class SimpleExecutor extends BaseExecutor {
     Statement stmt = null;
     try {
       Configuration configuration = ms.getConfiguration();
+      // 因为在之前已经获取了BoundSql，所以这里的boundSql不为null。在调用BaseStatementHandler构造方法构造StatementHandler的时候
       StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameter, rowBounds, resultHandler, boundSql);
+      // 构造Statement对象，会进行一系列操作：
+      // 1. 获取Connection; 2. 是否生成主键配置; 3. 参数处理
       stmt = prepareStatement(handler, ms.getStatementLog());
       return handler.<E>query(stmt, resultHandler);
     } finally {
@@ -86,7 +89,9 @@ public class SimpleExecutor extends BaseExecutor {
   private Statement prepareStatement(StatementHandler handler, Log statementLog) throws SQLException {
     Statement stmt;
     Connection connection = getConnection(statementLog);
+    // 生成Statement对象，方法中会对使用了useGenerateKey生成主键策略的配置进行设置
     stmt = handler.prepare(connection, transaction.getTimeout());
+    // 委托给ParameterHandler进行参数处理
     handler.parameterize(stmt);
     return stmt;
   }

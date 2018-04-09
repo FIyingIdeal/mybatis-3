@@ -35,6 +35,9 @@ import org.apache.ibatis.type.TypeHandlerRegistry;
 /**
  * @author Clinton Begin
  * @author Eduardo Macarron
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-4-9 13:56:46
  */
 public class DefaultParameterHandler implements ParameterHandler {
 
@@ -65,14 +68,21 @@ public class DefaultParameterHandler implements ParameterHandler {
     if (parameterMappings != null) {
       for (int i = 0; i < parameterMappings.size(); i++) {
         ParameterMapping parameterMapping = parameterMappings.get(i);
+        // 只过滤mode=in的ParameterMapping，默认在构造ParameterMapping的时候指定mode都为IN
+        // 一般只在执行有返回值的存储过程的时候才会遇到设置mode=out的情况
         if (parameterMapping.getMode() != ParameterMode.OUT) {
           Object value;
+          // 获取参数名
           String propertyName = parameterMapping.getProperty();
+          // 获取参数值value
           if (boundSql.hasAdditionalParameter(propertyName)) { // issue #448 ask first for additional params
+            // TODO additionalParameter是干什么的，可以通过什么方式赋值有待研究，但可以肯定的是其优先级最高
             value = boundSql.getAdditionalParameter(propertyName);
           } else if (parameterObject == null) {
+            // 如果参数为null的话直接将value置为null
             value = null;
           } else if (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) {
+            // 如果对应的参数设置了TypeHandler的话，直接将参数值赋值给value，在下边会使用TypeHandler处理值
             value = parameterObject;
           } else {
             MetaObject metaObject = configuration.newMetaObject(parameterObject);
@@ -81,9 +91,11 @@ public class DefaultParameterHandler implements ParameterHandler {
           TypeHandler typeHandler = parameterMapping.getTypeHandler();
           JdbcType jdbcType = parameterMapping.getJdbcType();
           if (value == null && jdbcType == null) {
+            // 如果value和jdbcType都为null，设置jdbcType=JdbcType.OTHER
             jdbcType = configuration.getJdbcTypeForNull();
           }
           try {
+            // 这里为PreparedStatement设置参数
             typeHandler.setParameter(ps, i + 1, value, jdbcType);
           } catch (TypeException e) {
             throw new TypeException("Could not set parameters for mapping: " + parameterMapping + ". Cause: " + e, e);
