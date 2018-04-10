@@ -443,10 +443,14 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return columns;
   }
 
+  // 对column中配置多个键值的处理：column={prop1=col1,prop2=col2}，这里的参数columnName是{prop1=col1,prop2=col2}
   private List<ResultMapping> parseCompositeColumnName(String columnName) {
     List<ResultMapping> composites = new ArrayList<ResultMapping>();
+    // 有 = 或 , composites才会有值
     if (columnName != null && (columnName.indexOf('=') > -1 || columnName.indexOf(',') > -1)) {
       StringTokenizer parser = new StringTokenizer(columnName, "{}=, ", false);
+      // 对于{prop1=col1,prop2=col2}，while遍历两次，property分别为 prop1,prop2；column分别为col1,col2
+      // 也就是说这里获取遍历键值对后封装成ResultMapping对象
       while (parser.hasMoreTokens()) {
         String property = parser.nextToken();
         String column = parser.nextToken();

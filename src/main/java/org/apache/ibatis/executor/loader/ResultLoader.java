@@ -36,6 +36,11 @@ import org.apache.ibatis.transaction.TransactionFactory;
 
 /**
  * @author Clinton Begin
+ *
+ * @commentauthor yanchao
+ * @datetime 2018-4-10 14:11:01
+ * @function 执行一个查询获取对应的结果集，现在已知的使用情景：
+ *              1. 在通过ResultSetHandler封装结果集的时候会执行嵌套查询，会使用这个类来执行嵌套查询
  */
 public class ResultLoader {
 
@@ -66,12 +71,25 @@ public class ResultLoader {
     this.creatorThreadId = Thread.currentThread().getId();
   }
 
+  /**
+   * 执行查询获取结果
+   * @return
+   * @throws SQLException
+   */
   public Object loadResult() throws SQLException {
+    // 执行查询获取结果
     List<Object> list = selectList();
+    // 对结果进行类型转换
     resultObject = resultExtractor.extractObjectFromList(list, targetType);
     return resultObject;
   }
 
+  /**
+   * 执行查询并获取结果
+   * @param <E>
+   * @return
+   * @throws SQLException
+   */
   private <E> List<E> selectList() throws SQLException {
     Executor localExecutor = executor;
     if (Thread.currentThread().getId() != this.creatorThreadId || localExecutor.isClosed()) {
@@ -86,6 +104,10 @@ public class ResultLoader {
     }
   }
 
+  /**
+   * 新建一个Executor对象，这个方法不一定会被调用
+   * @return
+   */
   private Executor newExecutor() {
     final Environment environment = configuration.getEnvironment();
     if (environment == null) {

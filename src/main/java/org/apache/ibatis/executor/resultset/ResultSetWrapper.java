@@ -53,11 +53,16 @@ public class ResultSetWrapper {
     super();
     this.typeHandlerRegistry = configuration.getTypeHandlerRegistry();
     this.resultSet = rs;
+    // 获取结果集元数据
     final ResultSetMetaData metaData = rs.getMetaData();
+    // 获取结果集列数量
     final int columnCount = metaData.getColumnCount();
     for (int i = 1; i <= columnCount; i++) {
+      // 保存结果集中所有列的名称
       columnNames.add(configuration.isUseColumnLabel() ? metaData.getColumnLabel(i) : metaData.getColumnName(i));
+      // 保存结果集中所有列的JDBC类型
       jdbcTypes.add(JdbcType.forCode(metaData.getColumnType(i)));
+      // 保存结果集中所有列的java类型
       classNames.add(metaData.getColumnClassName(i));
     }
   }

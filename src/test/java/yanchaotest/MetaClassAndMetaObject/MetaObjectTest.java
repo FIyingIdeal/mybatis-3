@@ -4,9 +4,12 @@ import org.apache.ibatis.reflection.DefaultReflectorFactory;
 import org.apache.ibatis.reflection.MetaClass;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.SystemMetaObject;
+import org.apache.ibatis.reflection.factory.DefaultObjectFactory;
+import org.junit.Test;
 import yanchaotest.objectFactory.PrivateConstructorClass;
 
 import java.util.Arrays;
+import java.util.Map;
 
 /**
  * @author yanchao
@@ -28,5 +31,14 @@ public class MetaObjectTest {
 
         MetaClass metaClass = MetaClass.forClass(PrivateConstructorClass.class, new DefaultReflectorFactory());
         Arrays.stream(metaClass.getSetterNames()).forEach(s -> System.out.println(s));
+    }
+
+    @Test
+    public void mapMetaObject() {
+        Map<String, Object> map = new DefaultObjectFactory().create(Map.class);
+        System.out.println(map.getClass());
+        MetaObject mapMetaObject = SystemMetaObject.forObject(map);
+        mapMetaObject.setValue("test", "test");
+        System.out.println(map.get("test"));
     }
 }
