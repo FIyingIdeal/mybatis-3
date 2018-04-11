@@ -789,7 +789,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     final MappedStatement nestedQuery = configuration.getMappedStatement(nestedQueryId);
     // 获取参数类型
     final Class<?> nestedQueryParameterType = nestedQuery.getParameterMap().getType();
-    // 获取参数值。嵌套查询的参数值是外层查询结果集中指定的字段（通过column属性指定）对应的值
+    // 获取嵌套查询参数值。嵌套查询的参数值是外层查询结果集中指定的字段（通过column属性指定）对应的值
     final Object nestedQueryParameterObject = prepareParameterForNestedQuery(rs, constructorMapping, nestedQueryParameterType, columnPrefix);
     Object value = null;
     // 当参数值不为null的时候，嵌套查询才会执行
@@ -800,7 +800,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
       // 获取指定的javaType属性值，这个是什么就指定什么，如List就指定为List，不要像resultMap中只指定为List中元素的类型
       final Class<?> targetType = constructorMapping.getJavaType();
       final ResultLoader resultLoader = new ResultLoader(configuration, executor, nestedQuery, nestedQueryParameterObject, targetType, key, nestedBoundSql);
-      // 获取嵌套查询结果值并返回
+      // 获取嵌套查询结果值并返回，本身还是调用了Executor#query()方法来执行查询
       value = resultLoader.loadResult();
     }
     return value;
@@ -923,7 +923,7 @@ public class DefaultResultSetHandler implements ResultSetHandler {
     Set<String> pastDiscriminators = new HashSet<String>();
     Discriminator discriminator = resultMap.getDiscriminator();
     while (discriminator != null) {
-      // 获取<discriminator>column属性指定字段在查询结果集中当前遍历到的记录的值，其值理论上会与某一个<case>中的value属性值相同
+      // 获取<discriminator>column属性指定字段在查询结果集中当前遍历到的记录的值
       final Object value = getDiscriminatorValue(rs, discriminator, columnPrefix);
       // 获取<case value="" resultMap="">中resultMap属性对应的值
       final String discriminatedMapId = discriminator.getMapIdFor(String.valueOf(value));
