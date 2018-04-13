@@ -66,11 +66,12 @@ public class MapperRegistry {
       }
       boolean loadCompleted = false;
       try {
+        // 将接口封装成了MapperProxyFactory对象，这个类中的newInstance()方法用来生成一个该接口的代理对象
         knownMappers.put(type, new MapperProxyFactory<T>(type));
         // It's important that the type is added before the parser is run
         // otherwise the binding may automatically be attempted by the
         // mapper parser. If the type is already known, it won't try.
-        // 使用MapperAnnotationBuilder来解析注解形式的sql及其他配置
+        // 使用MapperAnnotationBuilder来解析接口同一个包下的同名xml mapper配置（如果存在的话）及注解形式的sql配置
         MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type);
         parser.parse();
         loadCompleted = true;

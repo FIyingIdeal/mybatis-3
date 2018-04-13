@@ -125,16 +125,30 @@ public class MapperAnnotationBuilder {
   public void parse() {
     String resource = type.toString();
     if (!configuration.isResourceLoaded(resource)) {
+      // 先尝试从当前类路径下查找是否有同名的.xml形式的mapper配置文件，如果存在且未解析过的话就使用XMLMapperBuilder进行解析
       loadXmlResource();
+      /**
+       * 添加解析标记：interface的Class对象的toString()返回值，而之前有可能添加过其他两种解析标记：
+       *     1. {@link XMLMapperBuilder#parse()} 中将使用 <mapper resource="xxx">或<mapper url="xxx">形式配置中的resource或url属性值添加到已解析列表；
+       *        如果mapper不是采用这两种方式配置的话，则不会添加；
+       *     2. {@link XMLMapperBuilder#bindMapperForNamespace()} 中，如果mapper文件中的namespace属性值与接口对应，则添加了 "namespace:" + ${namespace} 到已解析列表；
+       *
+       *     而这里进行了第三种已解析标记的添加：
+       *
+       *     3. 其形式为 interface对应的Class对象的toString()返回的字符串，其与getName()返回形式不同，具体参看{@link Class#toString()}
+       */
       configuration.addLoadedResource(resource);
       assistant.setCurrentNamespace(type.getName());
       parseCache();
       parseCacheRef();
       Method[] methods = type.getMethods();
+      // 遍历接口中的所有方法，解析方法上相关的sql注解
       for (Method method : methods) {
         try {
           // issue #237
+          // 排除桥接方法
           if (!method.isBridge()) {
+            //
             parseStatement(method);
           }
         } catch (IncompleteElementException e) {
@@ -164,8 +178,9 @@ public class MapperAnnotationBuilder {
     // Spring may not know the real resource name so we check a flag
     // to prevent loading again a resource twice
     // this flag is set at XMLMapperBuilder#bindMapperForNamespace
+    // （注意看上边的英文注释）这里先判断接口对应的XML形式的mapper文件是否解析，如果没有的话，会先尝试加载xml文件并解析
     if (!configuration.isResourceLoaded("namespace:" + type.getName())) {
-      // 获取interface Mapper对应的xml配置文件路径，由此可知是在同一个包下查找
+      // 在类（更准确说是接口）路径下查找对应同名的xml Mapper配置文件路径，由此可知此时的xml mapper与对应的java文件需要在同一个包下
       String xmlResource = type.getName().replace('.', '/') + ".xml";
       InputStream inputStream = null;
       try {
@@ -289,9 +304,15 @@ public class MapperAnnotationBuilder {
     return null;
   }
 
+  /**
+   * 解析接口中某一方法上的SQL注解
+   * @param method
+   */
   void parseStatement(Method method) {
+    // 获取参数类型，注意这里不是一个数组类型，因为多参数(除RowBounds和ResultHandler还有多个参数)的时候会返回参数类型为ParamMap.class
     Class<?> parameterTypeClass = getParameterType(method);
     LanguageDriver languageDriver = getLanguageDriver(method);
+    // 获取SqlSource
     SqlSource sqlSource = getSqlSourceFromAnnotations(method, parameterTypeClass, languageDriver);
     if (sqlSource != null) {
       Options options = method.getAnnotation(Options.class);
@@ -310,6 +331,7 @@ public class MapperAnnotationBuilder {
       String keyColumn = null;
       if (SqlCommandType.INSERT.equals(sqlCommandType) || SqlCommandType.UPDATE.equals(sqlCommandType)) {
         // first check for SelectKey annotation - that overrides everything else
+        // 如果是insert或update操作的话，检查@SelectKey是否存在
         SelectKey selectKey = method.getAnnotation(SelectKey.class);
         if (selectKey != null) {
           keyGenerator = handleSelectKeyAnnotation(selectKey, mappedStatementId, getParameterType(method), languageDriver);
@@ -339,6 +361,7 @@ public class MapperAnnotationBuilder {
       }
 
       String resultMapId = null;
+      // @ResultMap处理
       ResultMap resultMapAnnotation = method.getAnnotation(ResultMap.class);
       if (resultMapAnnotation != null) {
         String[] resultMaps = resultMapAnnotation.value();
@@ -391,9 +414,21 @@ public class MapperAnnotationBuilder {
     return assistant.getLanguageDriver(langClass);
   }
 
+  /**
+   * 获取参数类型，如果是多个参数的话会进行处理，具体处理逻辑见方法内解析注释
+   * @param method
+   * @return
+   */
   private Class<?> getParameterType(Method method) {
     Class<?> parameterType = null;
     Class<?>[] parameterTypes = method.getParameterTypes();
+    /**
+     * 这个for循环有意思，分为几种情况：
+     *    1. 如果方法参数类型只有RowBounds或ResultHandler的话，返回的parameterType为null；
+     *    2. 如果方法参数类型除去RowBounds和ResultHandler的话还有一个其他类型的参数的话，则返回的parameterType就是这个参数对应的类型；
+     *    3. 如果方法参数类型除去RowBounds和ResultHandler的话还有多个其他类型的参数的话，则返回的parameterType是ParamMap.class；
+     * 也就是说对于有非RowBounds和ResultHandler类型的多个参数的时候，参数会被封装到ParamMap当中，其本质就是一个HashMap
+     */
     for (Class<?> currentParameterType : parameterTypes) {
       if (!RowBounds.class.isAssignableFrom(currentParameterType) && !ResultHandler.class.isAssignableFrom(currentParameterType)) {
         if (parameterType == null) {
@@ -467,6 +502,7 @@ public class MapperAnnotationBuilder {
           throw new BindingException("You cannot supply both a static SQL and SqlProvider to method named " + method.getName());
         }
         Annotation sqlAnnotation = method.getAnnotation(sqlAnnotationType);
+        // 为什么要通过反射来执行value()方法呢？直接sqlAnnotation.value()不就可以吗
         final String[] strings = (String[]) sqlAnnotation.getClass().getMethod("value").invoke(sqlAnnotation);
         return buildSqlSourceFromStrings(strings, parameterType, languageDriver);
       } else if (sqlProviderAnnotationType != null) {

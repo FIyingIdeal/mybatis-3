@@ -206,12 +206,16 @@ public class MapperMethod {
 
   }
 
+  /**
+   * 这个类保存了一个{@code MappedStatement}实例的{@link MappedStatement#id} 与 {@link MappedStatement#sqlCommandType}属性
+   */
   public static class SqlCommand {
 
     private final String name;
     private final SqlCommandType type;
 
     public SqlCommand(Configuration configuration, Class<?> mapperInterface, Method method) {
+      // 拼接MappedStatement的id属性值，根据该值从Configuration中查找是否有对应的MappedStatement对象
       String statementName = mapperInterface.getName() + "." + method.getName();
       MappedStatement ms = null;
       if (configuration.hasStatement(statementName)) {

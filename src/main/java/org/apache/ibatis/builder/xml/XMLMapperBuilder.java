@@ -32,6 +32,7 @@ import org.apache.ibatis.builder.CacheRefResolver;
 import org.apache.ibatis.builder.IncompleteElementException;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.apache.ibatis.builder.ResultMapResolver;
+import org.apache.ibatis.builder.annotation.MapperAnnotationBuilder;
 import org.apache.ibatis.cache.Cache;
 import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.io.Resources;
@@ -69,8 +70,14 @@ public class XMLMapperBuilder extends BaseBuilder {
         configuration, resource, sqlFragments);
   }
 
+  /**
+   * 这个构造方法在{@link MapperAnnotationBuilder#loadXmlResource()}中进行了调用，即解析interface同一个包下的同名xml时调用
+   * 这里将{@link MapperBuilderAssistant#currentNamespace}设置为了接口名（Class.getName()），在解析xml时会重新设置currentNamespace
+   * 如果发现两次设置的currentNamespace值不一致将会抛出异常
+   */
   public XMLMapperBuilder(InputStream inputStream, Configuration configuration, String resource, Map<String, XNode> sqlFragments, String namespace) {
     this(inputStream, configuration, resource, sqlFragments);
+    // 设置{@link MapperBuilderAssistant#currentNamespace}设置为了接口名
     this.builderAssistant.setCurrentNamespace(namespace);
   }
 
@@ -564,23 +571,29 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
   private void bindMapperForNamespace() {
-    // 获取当前mapper配置文件的namespace，该值是interface的全限定名
+    // 获取当前mapper配置文件的namespace
     String namespace = builderAssistant.getCurrentNamespace();
     if (namespace != null) {
       Class<?> boundType = null;
+      // 这个namespace值可能会与一个interface对应，也可能不对应，使用ClassLoader尝试加载
+      // 如果加载到说明这个mapper与一个interface相对应，如果加载不到，说明与interface不对应
       try {
         boundType = Resources.classForName(namespace);
       } catch (ClassNotFoundException e) {
         //ignore, bound type is not required
+        // 加载不到无所谓，忽略异常
       }
       if (boundType != null) {
+        // 如果namespace值是一个接口名，判断这个接口有没有解析（因为接口中也可能有注解或接口类同一个包下有同名的xml mapper配置需要解析）
+        // 接口没有解析的话在addMapper(Class)中会解析
         if (!configuration.hasMapper(boundType)) {
           // Spring may not know the real resource name so we set a flag
           // to prevent loading again this resource from the mapper interface
           // look at MapperAnnotationBuilder#loadXmlResource
           // 将xml配置文件在 Configuration#loadResources 中注册了两次，一次是以xml文件的具体路径注册，一次是以 "namespace:" + ${namespace}
-          // TODO 对namespace的注册看原注释是为了和spring整合使用的，还没看到
+          // 这样是为了防止接口重复解析
           configuration.addLoadedResource("namespace:" + namespace);
+          // addMapper(Class)方法中进行接口解析
           configuration.addMapper(boundType);
         }
       }

@@ -15,6 +15,7 @@
  */
 package org.apache.ibatis.builder;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -77,6 +78,15 @@ public class MapperBuilderAssistant extends BaseBuilder {
       throw new BuilderException("The mapper element requires a namespace attribute to be specified.");
     }
 
+    /**
+     * {@link org.apache.ibatis.builder.xml.XMLMapperBuilder#XMLMapperBuilder(InputStream, Configuration, String, Map, String)}
+     * 在解析接口对应同一个包下的同名xml mapper时被调用，在这个构造方法中将currentNamespace设置成了接口的getName()返回值
+     * 而在{@link org.apache.ibatis.builder.xml.XMLMapperBuilder#configurationElement(XNode)} 方法中对xml进行解析的时候会将
+     * currentNamespace设置成<mapper namespace=>中namespace属性对应的值
+     *
+     * 两次设置的时候都调用了该方法，这里进行比较是确保两次设置的currentNamespace一致，也就是说当interface与xml相关联的时候，
+     * xml中的namespace属性必须要为interface的getName()返回值
+     */
     if (this.currentNamespace != null && !this.currentNamespace.equals(currentNamespace)) {
       throw new BuilderException("Wrong namespace. Expected '"
           + this.currentNamespace + "' but found '" + currentNamespace + "'.");
