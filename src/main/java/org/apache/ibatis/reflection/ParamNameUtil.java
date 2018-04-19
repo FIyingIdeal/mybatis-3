@@ -37,6 +37,7 @@ public class ParamNameUtil {
 
   private static List<String> getParameterNames(Executable executable) {
     final List<String> names = new ArrayList<String>();
+    // 获取方法参数，Parameter#getName()方法可以获取到参数名称，但需要在编译的时候添加-parameters参数，否则获取到的参数名称为arg0,arg1...形式的
     final Parameter[] params = executable.getParameters();
     for (Parameter param : params) {
       names.add(param.getName());

@@ -44,6 +44,10 @@ public class DefaultParameterHandler implements ParameterHandler {
   private final TypeHandlerRegistry typeHandlerRegistry;
 
   private final MappedStatement mappedStatement;
+  /**
+   * parameterObject是在{@link Configuration#newParameterHandler(MappedStatement, Object, BoundSql)}
+   * 新建ParameterHandler的时候传入的查询参数的包装对象
+   */
   private final Object parameterObject;
   private BoundSql boundSql;
   private Configuration configuration;
@@ -76,7 +80,13 @@ public class DefaultParameterHandler implements ParameterHandler {
           String propertyName = parameterMapping.getProperty();
           // 获取参数值value
           if (boundSql.hasAdditionalParameter(propertyName)) { // issue #448 ask first for additional params
-            // TODO additionalParameter是干什么的，可以通过什么方式赋值有待研究，但可以肯定的是其优先级最高
+            /**
+             * TODO （解决）additionalParameter是干什么的，可以通过什么方式赋值有待研究，但可以肯定的是其优先级最高
+             * {@link org.apache.ibatis.scripting.xmltags.DynamicSqlSource#getBoundSql(Object)} 中
+             * 为additionalParameter <=> {@link BoundSql#metaParameters} 设置值，但只有两个key：_parameter和_databaseId
+             * 可以从这里获取到值。
+             * 所以对于只有一个参数且没有使用@Param的查询，在sql中获取参数是在这个if中获取到值的
+             */
             value = boundSql.getAdditionalParameter(propertyName);
           } else if (parameterObject == null) {
             // 如果参数为null的话直接将value置为null

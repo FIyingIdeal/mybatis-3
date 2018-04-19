@@ -53,6 +53,13 @@ public class DynamicContext {
       bindings = new ContextMap(null);
     }
     // TODO parameter_object_key设置为了_parameter（这个应该是和当只有一个String参数时使用#{_parameter}来获取参数值相关）
+    /**
+     * {@link org.apache.ibatis.binding.MapperMethod.MethodSignature#convertArgsToSqlCommandParam(Object[])} 这个方法处理参数的时候
+     * 会根据参数个数做出处理：当没有参数的时候返回null；只有一个参数且没有使用@Param时返回参数值；其余情况返回一个ParamMap（继承了HashMap）对象；
+     * 而在{@link org.apache.ibatis.session.defaults.DefaultSqlSession#wrapCollection(Object)} 是会对参数再出处理，
+     * 但这时只对Collection及其子类型和Array进行了处理，其余情况直接返回原始对象，也就是说如果是一个String类型值或Map等其他情况下，都直接返回
+     * 在这里将参数封装到了bingings（Map）对象中，且key值为_parameter
+     */
     bindings.put(PARAMETER_OBJECT_KEY, parameterObject);
     bindings.put(DATABASE_ID_KEY, configuration.getDatabaseId());
   }
@@ -90,6 +97,11 @@ public class DynamicContext {
       this.parameterMetaObject = parameterMetaObject;
     }
 
+    /**
+     * 重写了HashMap的get()方法，先从Map中获取，如果获取到从parameterMetaObject中获取
+     * @param key
+     * @return
+     */
     @Override
     public Object get(Object key) {
       String strKey = (String) key;

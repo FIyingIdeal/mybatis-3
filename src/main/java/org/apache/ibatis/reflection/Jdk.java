@@ -31,6 +31,7 @@ public class Jdk {
   static {
     boolean available = false;
     try {
+      // java.lang.reflect.Parameter是JDK1.8提供的类，用于参数的操作，如果可以加载到这个类的话，parameterExists=true
       Resources.classForName("java.lang.reflect.Parameter");
       available = true;
     } catch (ClassNotFoundException e) {

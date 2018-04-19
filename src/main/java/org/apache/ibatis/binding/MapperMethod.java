@@ -282,6 +282,14 @@ public class MapperMethod {
       this.paramNameResolver = new ParamNameResolver(configuration, method);
     }
 
+    /**
+     * 解析方法参数，分多种情况（一下提到的参数个数是所有方法参数除去RowBound和ResultHandler类型参数后剩余的参数个数）：
+     *    1. 如果没有参数，则直接返回null；
+     *    2. 如果只有一个参数且没有使用@Param标注，返回参数值；
+     *    3. 如果只有一个参数且使用了@Param标注或方法有多个参数时，将参数封装成一个{@link ParamMap}，其本质是一个HashMap，key值为参数名称，value为参数值
+     * @param args
+     * @return
+     */
     public Object convertArgsToSqlCommandParam(Object[] args) {
       return paramNameResolver.getNamedParams(args);
     }
